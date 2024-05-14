@@ -8,8 +8,9 @@ class VQLS:
     def __init__(self, A, b):
         self.A = A
         self.b = b
-
         self.nqubits = len(b)
+
+        self.mats, self.wires, self.c = self.get_paulis(self.A)
 
     def opt(self):
         # optimization configs
@@ -17,7 +18,7 @@ class VQLS:
         eta = 0.8  # Learning rate
         q_delta = 0.001 * np.pi  # Initial spread of random quantum weights
         np.random.seed(0)
-        layers = 1
+        # layers = 1
 
         # initial weights for strongly entangling layers
         w = q_delta * np.random.randn(n_qubits, requires_grad=True)
@@ -30,7 +31,7 @@ class VQLS:
         t0 = time()
         for it in range(steps):
             ta = time()
-            w, cost_val = opt.step_and_cost(cost, w)
+            w, cost_val = opt.step_and_cost(self.cost, w)
             print("Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(it, cost_val, time() - ta))
             if np.abs(cost_val) < 1e-4:
                 break
@@ -42,12 +43,14 @@ class VQLS:
         plt.ylabel("Cost function")
         plt.xlabel("Optimization steps")
 
-    def qlayer(self):
+        return w
+
+    def qlayer(self, l=None, lp=None, j=None, part=None):
 
         dev_mu = qml.device("default.qubit", wires=n_qubits + 1)
 
         @qml.qnode(dev_mu)
-        def qcircuit(weights, l=None, lp=None, j=None, part=None):
+        def qcircuit(weights):
             """
           Variational circuit mapping the ground state |0> to the ansatz state |x>.
 
@@ -76,7 +79,7 @@ class VQLS:
             self.V(weights)
 
             # Controlled application of the unitary component A_l of the problem matrix A.
-            self.CA(l, mats, wires)
+            self.CA(l, self.mats, self.wires)
 
             # Adjoint of the unitary U_b associated to the problem vector |b>.
             qml.adjoint(self.U_b)(self.b)
@@ -89,7 +92,7 @@ class VQLS:
             self.U_b(self.b)
 
             # Controlled application of Adjoint(A_lp).
-            qml.adjoint(self.CA)(lp, mats, wires)
+            qml.adjoint(self.CA)(lp, self.mats, self.wires)
 
             # Second Hadamard gate applied to the ancillary qubit.
             qml.Hadamard(wires=n_qubits)
@@ -97,24 +100,26 @@ class VQLS:
             # Expectation value of Z for the ancillary qubit.
             return qml.expval(qml.PauliZ(wires=n_qubits))
 
+        return qcircuit()
+
     def U_b(self, vec):
         """
         Unitary matrix rotating the ground state to the problem vector |b> = U_b |0>.
         """
-        qml.AmplitudeEmbedding(features=vec, wires=range(self.n_qubits), normalize=True)  # O(n^2)
+        qml.AmplitudeEmbedding(features=vec, wires=range(self.nqubits), normalize=True)  # O(n^2)
 
     def CA(self, idx, matrices, qubits):
         """
         Controlled versions of the unitary components A_l of the problem matrix A.
         """
-        qml.ControlledQubitUnitary(matrices[idx], control_wires=[n_qubits], wires=qubits[idx])
+        qml.ControlledQubitUnitary(matrices[idx], control_wires=[self.nqubits], wires=qubits[idx])
 
     def V(self, weights):
         """
         Variational circuit mapping the ground state |0> to the ansatz state |x>.
         """
 
-        for idx in range(self.n_qubits):
+        for idx in range(self.nqubits):
             qml.Hadamard(wires=idx)
 
         for idx, element in enumerate(weights):
@@ -151,9 +156,7 @@ class VQLS:
 
         return matrices, qubits, coeffs
 
-    mats, wires, c = get_paulis(A)
-
-    def cost(weights):
+    def cost(self, weights):
         """
       Local version of the cost function. Tends to zero when A|x> is proportional to |b>.
 
@@ -167,24 +170,27 @@ class VQLS:
 
         mu_sum = 0.0
         psi_norm = 0.0
-        for l in range(0, len(c)):
-            for lp in range(0, len(c)):
-                psi_real = qnode(weights, l=l, lp=lp, j=-1, part="Re")
-                psi_imag = qnode(weights, l=l, lp=lp, j=-1, part="Im")
-                psi_norm += c[l] * np.conj(c[lp]) * (psi_real + 1.0j * psi_imag)
+        for l in range(0, len(self.c)):
+            for lp in range(0, len(self.c)):
+                psi_real = self.qlayer(weights, l=l, lp=lp, j=-1, part="Re")
+                psi_imag = self.qlayer(weights, l=l, lp=lp, j=-1, part="Im")
+                psi_norm += self.c[l] * np.conj(self.c[lp]) * (psi_real + 1.0j * psi_imag)
                 for j in range(0, n_qubits):
-                    mu_real = qnode(weights, l=l, lp=lp, j=j, part="Re")
-                    mu_imag = qnode(weights, l=l, lp=lp, j=j, part="Im")
-                    mu_sum += c[l] * np.conj(c[lp]) * (mu_real + 1.0j * mu_imag)
+                    mu_real = self.qlayer(weights, l=l, lp=lp, j=j, part="Re")
+                    mu_imag = self.qlayer(weights, l=l, lp=lp, j=j, part="Im")
+                    mu_sum += self.c[l] * np.conj(self.c[lp]) * (mu_real + 1.0j * mu_imag)
 
         # Cost function C_L
         return 0.5 - 0.5 * abs(mu_sum) / (n_qubits * abs(psi_norm))
 
-    def postproc(self):
+    def solve_classic(self):
+        return np.linalg.solve(self.A, self.b)
+
+    def get_state(self, wopt):
 
         # classical probabilities
-        A_inv = np.linalg.inv(A)
-        x = np.dot(A_inv, b)
+        A_inv = np.linalg.inv(self.A)
+        x = np.dot(A_inv, self.b)
         c_probs = (x / np.linalg.norm(x)) ** 2
 
         # quantum probabilities
@@ -193,10 +199,10 @@ class VQLS:
 
         @qml.qnode(dev_x, interface="autograd")
         def prepare_and_sample(weights):
-            V(weights)
+            self.V(weights)
             return qml.sample()
 
-        raw_samples = prepare_and_sample(w)
+        raw_samples = prepare_and_sample(wopt)
         if n_qubits == 1:
             raw_samples = [[_] for _ in raw_samples]
         samples = []
@@ -222,15 +228,18 @@ class VQLS:
 
         @qml.qnode(dev_x)
         def prepare_and_get_state(weights):
-            V(weights)  # V(weight)|0>
+            self.V(weights)  # V(weight)|0>
             return qml.state()  # |x>
 
+        state = np.round(np.real(prepare_and_get_state(wopt)), 2)
+
         print(" x  =", np.round(x / np.linalg.norm(x), 2))
-        print("|x> =", np.round(np.real(prepare_and_get_state(w)), 2))
+        print("|x> =", state)
+
+        return state
 
 
 if __name__ == "__main__":
-
     # number of qubits
     n_qubits = 2
 
@@ -244,4 +253,6 @@ if __name__ == "__main__":
 
     solver = VQLS(A=A0, b=b0)
 
-    xopt = solver.opt()
+    wopt = solver.opt()
+
+    xopt = solver.get_state(wopt)
