@@ -1,16 +1,48 @@
+from time import time
 import pennylane as qml
 import pennylane.numpy as np
 import matplotlib.pyplot as plt
-from time import time
+
+
+def get_paulis(mat):
+    """
+  Decompose the input matrix into its Pauli components in O(4^n) time
+
+  Args:
+      mat (np.array): Matrix to decompose.
+
+  Returns:
+      mats (list): Pauli matrices
+      wires(list): wire indices, where the Pauli matrices are applied
+
+  """
+
+    # decompose
+    pauli_matrix = qml.pauli_decompose(mat, check_hermitian=True, pauli=False)
+
+    # get coefficients and operators
+    coeffs = pauli_matrix.coeffs
+    ops = pauli_matrix.ops
+
+    # create Pauli word
+    pw = qml.pauli.PauliWord({i: pauli for i, pauli in enumerate(ops)})
+
+    # get wires
+    qubits = [pw[i].wires for i in range(len(pw))]
+
+    # convert Pauli operator to matrix
+    matrices = [qml.pauli.pauli_word_to_matrix(pw[i]) for i in range(len(pw))]
+
+    return matrices, qubits, coeffs
 
 
 class VQLS:
     def __init__(self, A, b):
         self.A = A
         self.b = b
-        self.nqubits = len(b)
+        self.nqubits = int(np.log(len(b))/np.log(2))
 
-        self.mats, self.wires, self.c = self.get_paulis(self.A)
+        self.mats, self.wires, self.c = get_paulis(self.A)
 
     def opt(self):
         # optimization configs
@@ -60,11 +92,6 @@ class VQLS:
           Returns:
               Expectation value of ancilla qubit in Pauli-Z basis
               :param weights:
-              :param l:
-              :param lp:
-              :param j:
-              :param part:
-
           """
 
             # First Hadamard gate applied to the ancillary qubit.
@@ -100,7 +127,7 @@ class VQLS:
             # Expectation value of Z for the ancillary qubit.
             return qml.expval(qml.PauliZ(wires=n_qubits))
 
-        return qcircuit()
+        return qcircuit
 
     def U_b(self, vec):
         """
@@ -117,6 +144,7 @@ class VQLS:
     def V(self, weights):
         """
         Variational circuit mapping the ground state |0> to the ansatz state |x>.
+
         """
 
         for idx in range(self.nqubits):
@@ -124,37 +152,6 @@ class VQLS:
 
         for idx, element in enumerate(weights):
             qml.RY(element, wires=idx)
-
-    def get_paulis(self, mat):
-        """
-      Decompose the input matrix into its Pauli components in O(4^n) time
-
-      Args:
-          mat (np.array): Matrix to decompose.
-
-      Returns:
-          mats (list): Pauli matrices
-          wires(list): wire indices, where the Pauli matrices are applied
-
-      """
-
-        # decompose
-        pauli_matrix = qml.pauli_decompose(mat, check_hermitian=True, pauli=False)
-
-        # get coefficients and operators
-        coeffs = pauli_matrix.coeffs
-        ops = pauli_matrix.ops
-
-        # create Pauli word
-        pw = qml.pauli.PauliWord({i: pauli for i, pauli in enumerate(ops)})
-
-        # get wires
-        qubits = [pw[i].wires for i in range(len(pw))]
-
-        # convert Pauli operator to matrix
-        matrices = [qml.pauli.pauli_word_to_matrix(pw[i]) for i in range(len(pw))]
-
-        return matrices, qubits, coeffs
 
     def cost(self, weights):
         """
@@ -172,12 +169,18 @@ class VQLS:
         psi_norm = 0.0
         for l in range(0, len(self.c)):
             for lp in range(0, len(self.c)):
-                psi_real = self.qlayer(weights, l=l, lp=lp, j=-1, part="Re")
-                psi_imag = self.qlayer(weights, l=l, lp=lp, j=-1, part="Im")
+                psi_real_qnode = self.qlayer(l=l, lp=lp, j=-1, part="Re")
+                psi_imag_qnode = self.qlayer(l=l, lp=lp, j=-1, part="Im")
+                psi_real = psi_real_qnode(weights)
+                psi_imag = psi_imag_qnode(weights)
+
                 psi_norm += self.c[l] * np.conj(self.c[lp]) * (psi_real + 1.0j * psi_imag)
                 for j in range(0, n_qubits):
-                    mu_real = self.qlayer(weights, l=l, lp=lp, j=j, part="Re")
-                    mu_imag = self.qlayer(weights, l=l, lp=lp, j=j, part="Im")
+                    mu_real_qnode = self.qlayer(l=l, lp=lp, j=j, part="Re")
+                    mu_imag_qnode = self.qlayer(l=l, lp=lp, j=j, part="Im")
+                    mu_real = mu_real_qnode(weights)
+                    mu_imag = mu_imag_qnode(weights)
+
                     mu_sum += self.c[l] * np.conj(self.c[lp]) * (mu_real + 1.0j * mu_imag)
 
         # Cost function C_L
@@ -186,7 +189,7 @@ class VQLS:
     def solve_classic(self):
         return np.linalg.solve(self.A, self.b)
 
-    def get_state(self, wopt):
+    def get_state(self, params):
 
         # classical probabilities
         A_inv = np.linalg.inv(self.A)
@@ -202,7 +205,7 @@ class VQLS:
             self.V(weights)
             return qml.sample()
 
-        raw_samples = prepare_and_sample(wopt)
+        raw_samples = prepare_and_sample(params)
         if n_qubits == 1:
             raw_samples = [[_] for _ in raw_samples]
         samples = []
@@ -231,7 +234,7 @@ class VQLS:
             self.V(weights)  # V(weight)|0>
             return qml.state()  # |x>
 
-        state = np.round(np.real(prepare_and_get_state(wopt)), 2)
+        state = np.round(np.real(prepare_and_get_state(params)), 2)
 
         print(" x  =", np.round(x / np.linalg.norm(x), 2))
         print("|x> =", state)
@@ -240,6 +243,7 @@ class VQLS:
 
 
 if __name__ == "__main__":
+
     # number of qubits
     n_qubits = 2
 
@@ -251,8 +255,9 @@ if __name__ == "__main__":
     b0 = np.ones(2 ** n_qubits)
     b0 = b0 / np.linalg.norm(b0)
 
+    # init
     solver = VQLS(A=A0, b=b0)
 
+    # get solution of lse
     wopt = solver.opt()
-
     xopt = solver.get_state(wopt)
