@@ -1,5 +1,6 @@
 # PlateaulessVQLS
-Avoiding Barren Plateaus using Avoidance, Mitigation and Escaping Strategies
+
+Using techniques to avoid or escape barren plateaus during the optimization of a variational quantum algorithm.
 
 Origins of Barren Plateaus
 - Exponentially large Hilbert spaces
@@ -8,11 +9,12 @@ Origins of Barren Plateaus
 - Noise
 
 Methods
+- Local Cost Function
+- Classical Deep Neural Networks
+
+To Be Implemented
 - Shallow circuits
 - Small dynamical Lie algebras
 - Variable structure ansatzes
-- Alternative initialization strategies 
-- Classical Deep Neural Networks
 - Recurrent Neural Networks
-- Local Cost Function
 - Convolutional Neural Networks
