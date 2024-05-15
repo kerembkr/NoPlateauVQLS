@@ -1,6 +1,5 @@
 import pennylane as qml
 import pennylane.numpy as np
-import matplotlib.pyplot as plt
 
 
 class Ansatz:
