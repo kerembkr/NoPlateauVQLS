@@ -1,3 +1,6 @@
+import pennylane as qml
+import pennylane.numpy as nps
+
 def init_params():
     raise NotImplementedError("to be implemented")
 
