@@ -18,15 +18,18 @@ def timing_decorator(func):
     return wrapper
 
 
-def plot_loss(loss_hist):
-    plt.figure(1)
-    plt.plot(loss_hist, "k", linewidth=2)
+def plot_loss(loss_hist, label):
+    # plt.figure(1)
+    # plt.plot(loss_hist, "k", linewidth=2)
+    plt.plot(loss_hist, linewidth=2, label=label)
+
     plt.ylabel("Cost function")
     plt.xlabel("Optimization steps")
-    plt.show()
+    plt.legend()
+    # plt.show()
 
 
-class Optimizer(ABC):
+class OptimizerQML(ABC):
     def __init__(self, eta, tol, maxiter, nqubits):
         self.eta = eta
         self.tol = tol
@@ -58,15 +61,52 @@ class Optimizer(ABC):
         pass
 
 
-class GradientDescent_pennylane(Optimizer):
+class GradientDescentQML(OptimizerQML):
     def __init__(self, eta, tol, maxiter, nqubits):
         super().__init__(eta, tol, maxiter, nqubits)
 
     def get_optimizer(self):
         return qml.GradientDescentOptimizer(self.eta)
 
-    def vqc(self, weights):
-        raise NotImplementedError("Not implemented yet.")
+
+class AdamQML(OptimizerQML):
+    def __init__(self, eta, tol, maxiter, nqubits):
+        super().__init__(eta, tol, maxiter, nqubits)
+
+    def get_optimizer(self):
+        return qml.AdamOptimizer(self.eta)
+
+
+class AdagradQML(OptimizerQML):
+    def __init__(self, eta, tol, maxiter, nqubits):
+        super().__init__(eta, tol, maxiter, nqubits)
+
+    def get_optimizer(self):
+        return qml.AdagradOptimizer(self.eta)
+
+
+class MomentumQML(OptimizerQML):
+    def __init__(self, eta, tol, maxiter, nqubits):
+        super().__init__(eta, tol, maxiter, nqubits)
+
+    def get_optimizer(self):
+        return qml.MomentumOptimizer(self.eta)
+
+
+class NesterovMomentumQML(OptimizerQML):
+    def __init__(self, eta, tol, maxiter, nqubits):
+        super().__init__(eta, tol, maxiter, nqubits)
+
+    def get_optimizer(self):
+        return qml.NesterovMomentumOptimizer(self.eta)
+
+
+class RMSPropQML(OptimizerQML):
+    def __init__(self, eta, tol, maxiter, nqubits):
+        super().__init__(eta, tol, maxiter, nqubits)
+
+    def get_optimizer(self):
+        return qml.RMSPropOptimizer(self.eta)
 
 
 if __name__ == "__main__":
@@ -91,7 +131,30 @@ if __name__ == "__main__":
         return qml.expval(hamiltonian)  # <H>
 
 
-    solver = GradientDescent_pennylane(eta=0.8, tol=0.01, maxiter=10, nqubits=n)
+    eta = 0.8
+    tol = 0.01
+    maxiter = 50
 
-    wopt, cost_history = solver.optimize(cost)
-    plot_loss(cost_history)
+    solver1 = GradientDescentQML(eta=eta, tol=tol, maxiter=maxiter, nqubits=n)
+    solver2 = AdamQML(eta=eta, tol=tol, maxiter=maxiter, nqubits=n)
+    solver3 = AdagradQML(eta=eta, tol=tol, maxiter=maxiter, nqubits=n)
+    solver4 = MomentumQML(eta=eta, tol=tol, maxiter=maxiter, nqubits=n)
+    solver5 = NesterovMomentumQML(eta=eta, tol=tol, maxiter=maxiter, nqubits=n)
+    solver6 = RMSPropQML(eta=eta, tol=tol, maxiter=maxiter, nqubits=n)
+
+    _, hist1 = solver1.optimize(cost)
+    _, hist2 = solver2.optimize(cost)
+    _, hist3 = solver3.optimize(cost)
+    _, hist4 = solver4.optimize(cost)
+    _, hist5 = solver5.optimize(cost)
+    _, hist6 = solver6.optimize(cost)
+
+    plot_loss(hist1, "GD")
+    plot_loss(hist2, "Adam")
+    plot_loss(hist3, "Adagrad")
+    plot_loss(hist4, "Momentum")
+    plot_loss(hist5, "Nesterov")
+    plot_loss(hist6, "RMSProp")
+    plt.show()
+
+
