@@ -1,9 +1,9 @@
 import pennylane as qml
-import pennylane.numpy as nps
+import pennylane.numpy as np
+
 
 def init_params():
     raise NotImplementedError("to be implemented")
-
 
 
 def get_paulis(mat):
