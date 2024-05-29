@@ -194,7 +194,7 @@ class VQLS:
         ax2.set_ylim(0.0, 1.0)
         ax2.set_xlabel("Hilbert space basis")
         ax2.set_title("Quantum probabilities")
-        # plt.show()
+        plt.show()
 
         dev_x = qml.device("lightning.qubit", wires=n_qubits, shots=None)
 

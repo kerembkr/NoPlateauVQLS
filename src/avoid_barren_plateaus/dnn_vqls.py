@@ -11,9 +11,10 @@ L = 1  # layers
 ni = 4  # features
 
 # linear system Ax=b
-A = np.random.rand(2**n, 2**n)
+A = np.random.rand(2 ** n, 2 ** n)
 A = A @ A.T
-b = np.ones(2**n)
+b = np.ones(2 ** n)
+
 
 def U_b(b):
     """
@@ -73,7 +74,7 @@ def get_paulis(A):
     ops = pauli_matrix.ops
 
     # create Pauli word
-    pw = qml.pauli.PauliWord({i:pauli for i, pauli in enumerate(ops)})
+    pw = qml.pauli.PauliWord({i: pauli for i, pauli in enumerate(ops)})
 
     # get wires
     wires = [pw[i].wires for i in range(len(pw))]
@@ -83,12 +84,13 @@ def get_paulis(A):
 
     return mats, wires, pauli_matrix.coeffs
 
+
 # Pauli decomposition
 mats, wires, c = get_paulis(A)
 
-def qlayer(n, l=None, lp=None, j=None, part=None):
 
-    dev = qml.device("default.qubit.torch", wires=n+1)
+def qlayer(n, l=None, lp=None, j=None, part=None):
+    dev = qml.device("default.qubit.torch", wires=n + 1)
 
     @qml.qnode(dev)
     def qcircuit(weights, inputs=None):
@@ -138,6 +140,7 @@ def qlayer(n, l=None, lp=None, j=None, part=None):
 
     return qcircuit
 
+
 class HybridNeuralNetwork(nn.Module):
 
     def __init__(self, qnode, nqubits, nlayers, ninputs, npaulis):
@@ -173,9 +176,8 @@ class HybridNeuralNetwork(nn.Module):
                         self.qlayers[(l, lp, j, part)] = getattr(self, f"xx_{it}")
                         it += 1
 
-
         # something new
-        init_method = functools.partial(torch.nn.init.uniform_, b=2*np.pi)
+        init_method = functools.partial(torch.nn.init.uniform_, b=2 * np.pi)
         self.alpha = torch.nn.Parameter(init_method(torch.Tensor(1, self.ninputs)), requires_grad=True)
 
     def forward(self, x):
@@ -190,7 +192,6 @@ class HybridNeuralNetwork(nn.Module):
         # y = torch.reshape(y, (self.nqubits,))
         y = torch.reshape(y, (1, self.nqubits))
 
-
         # use output of the DNN for every VQC
         outputs = {}
         for l in range(self.npaulis):
@@ -202,8 +203,8 @@ class HybridNeuralNetwork(nn.Module):
 
         return outputs, y
 
-def create_qnodes(n, lenc, qlayer):
 
+def create_qnodes(n, lenc, qlayer):
     qnode_dict = {}
     for l in range(lenc):
         for lp in range(lenc):
@@ -220,6 +221,7 @@ def create_qnodes(n, lenc, qlayer):
                 qnode_dict[(l, lp, j, "Im")] = qn_im_mu
 
     return qnode_dict
+
 
 def cost(out):
     """
@@ -258,8 +260,8 @@ def cost(out):
 
     return C_L
 
-def optimize():
 
+def optimize():
     # init hybrid model
     qlayers = create_qnodes(n, len(c), qlayer)
 
@@ -273,7 +275,7 @@ def optimize():
     cost_hist = []
 
     # features
-    x = torch.ones(ni)*(np.pi/4)
+    x = torch.ones(ni) * (np.pi / 4)
 
     # Optimizer
     opt = torch.optim.SGD(model.parameters(), lr=eta)
@@ -293,8 +295,8 @@ def optimize():
         cost_hist.append(loss.item())
 
         # print information
-        if i%1 == 0:
-            print("iter {:4d}    cost  {:.5f}    time  {:.4f}".format(i, loss, time()-t0))
+        if i % 1 == 0:
+            print("iter {:4d}    cost  {:.5f}    time  {:.4f}".format(i, loss, time() - t0))
 
         if loss.item() < tol:  # breaking condition
             print("\nOptimum found after {:3d} Steps!".format(i))
@@ -302,6 +304,7 @@ def optimize():
             return cost_hist, opti_mopti, 0
     _, opti_mopti = model(x)
     return cost_hist, opti_mopti, -1
+
 
 # start optimization
 loss_hist, w_opt, status = optimize()
@@ -325,10 +328,12 @@ n_shots = 10 ** 6
 
 dev_x = qml.device("lightning.qubit", wires=n, shots=n_shots)
 
+
 @qml.qnode(dev_x, interface="autograd")
 def prepare_and_sample(weights):
     V(weights)
     return qml.sample()
+
 
 # get samples
 raw_samples = prepare_and_sample(w_opt)
@@ -356,4 +361,3 @@ ax2.set_ylim(0.0, 1.0)
 ax2.set_xlabel("Hilbert space basis")
 ax2.set_title("Quantum probabilities")
 plt.show()
-
