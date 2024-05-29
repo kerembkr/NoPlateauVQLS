@@ -30,7 +30,7 @@ configs = tf.cast(configs, tf.float32)
 
 def cost_function(params, Energies, qcircuit, sequence=0, Net=None, G=0, p=0):
     result = qcircuit(params, G=G, p=p, sequence=sequence)
-    if Net == None:
+    if Net is None:
         configs_new = configs
     else:
         configs_new = tf.sign(Net(configs))
@@ -97,12 +97,10 @@ for i in tqdm(range(n_random)):
 
     # NN optimization. Second optimization step
     for k in range(NN_steps):
-        # print(k)
         NN_opt1(net_tf, params, opt_NN, qcircuit_stat, sequence=sequence)
 
     # QAOA optimization in NN energy landscape. Third optimization step
     for k in range(QAOA2_steps):
-        # print(k)
         params, cost = QAOA_opt(params, opt, Energies, qcircuit, Net=net_tf, G=G, p=p, sequence=sequence)
     # QAOA optimization step in original landscape. Fourth optimization step
     for k in range(QAOA4_steps):
