@@ -4,7 +4,6 @@ import pennylane as qml
 import pennylane.numpy as np
 import src.utils as utils
 from skopt import gp_minimize
-from skopt.plots import plot_gaussian_process
 
 
 class VQLS:
@@ -29,30 +28,16 @@ class VQLS:
         # Gradient Descent Optimization Algorithm
         opt = qml.GradientDescentOptimizer(eta)
 
-        # res = gp_minimize(self.cost,  # the function to minimize
-        #                   [(-2.0, 2.0)],  # the bounds on each dimension of x
-        #                   acq_func="EI",  # the acquisition function
-        #                   n_calls=15,  # the number of evaluations of f
-        #                   n_random_starts=5,  # the number of random initialization points
-        #                   noise=0.1 ** 2,  # the noise level (optional)
-        #                   random_state=1234)  # the random seed
-
-        def print_progress(res):
-            iteration = len(res.func_vals)
-            print(f"Step {iteration}    obj = {res.func_vals[-1]:9.7f}    params = {res.x_iters[-1]}")
+        def print_progress(res_):
+            iteration = len(res_.func_vals)
+            print(f"Step {iteration}    obj = {res_.func_vals[-1]:9.7f}    params = {res_.x_iters[-1]}")
 
         res = gp_minimize(func=self.cost,
-                          dimensions=[(0, 2.0*np.pi)], callback=[print_progress], n_calls=20)
+                          dimensions=[(-np.pi, +np.pi), (-np.pi, +np.pi)],
+                          callback=[print_progress],
+                          acq_func="EI",
+                          n_calls=1000)
         print(res)
-
-        plt.figure()
-        ax = plot_gaussian_process(res, n_calls=10,
-                                   objective=self.cost,
-                                   noise_level=0.1,
-                                   show_legend=True, show_title=False,
-                                   show_next_point=True, show_acq_func=True)
-
-        plt.show()
 
         # Optimization loop
         cost_history = []
@@ -142,6 +127,8 @@ class VQLS:
         Variational circuit mapping the ground state |0> to the ansatz state |x>.
 
         """
+
+        # print("nweights", len(weights))
 
         for idx in range(self.nqubits):
             qml.Hadamard(wires=idx)
@@ -254,14 +241,21 @@ if __name__ == "__main__":
     # init
     solver = VQLS(A=A0, b=b0)
 
-    # x = np.linspace(0, 2.0*np.pi, 200)
-    # vals = []
+    # x = np.linspace(-np.pi, np.pi, 100)
+    # y = np.linspace(-np.pi, np.pi, 100)
+    #
+    # Z = np.zeros((len(x), len(y)))
     # for i in range(len(x)):
-    #     f = solver.cost([x[i]])
-    #     vals.append(f)
-    # plt.plot(x, vals)
+    #     for j in range(len(y)):
+    #         Z[i, j] = solver.cost([x[i], y[j]])
+    #
+    # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    #
+    # X, Y = np.meshgrid(x, y)
+    # ax.plot_surface(X, Y, Z, cmap='viridis')
     # plt.show()
-
+    #
+    # print("f_min", min(Z))
 
     # get solution of lse
     wopt = solver.opt(epochs=100)
