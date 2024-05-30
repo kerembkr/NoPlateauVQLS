@@ -1,15 +1,17 @@
 from time import time
+import matplotlib.pyplot as plt
 import pennylane as qml
 import pennylane.numpy as np
-import matplotlib.pyplot as plt
 import src.utils as utils
+from skopt import gp_minimize
+from skopt.plots import plot_gaussian_process
 
 
 class VQLS:
     def __init__(self, A, b):
         self.A = A
         self.b = b
-        self.nqubits = int(np.log(len(b))/np.log(2))
+        self.nqubits = int(np.log(len(b)) / np.log(2))
 
         self.mats, self.wires, self.c = utils.get_paulis(self.A)
 
@@ -26,6 +28,31 @@ class VQLS:
 
         # Gradient Descent Optimization Algorithm
         opt = qml.GradientDescentOptimizer(eta)
+
+        # res = gp_minimize(self.cost,  # the function to minimize
+        #                   [(-2.0, 2.0)],  # the bounds on each dimension of x
+        #                   acq_func="EI",  # the acquisition function
+        #                   n_calls=15,  # the number of evaluations of f
+        #                   n_random_starts=5,  # the number of random initialization points
+        #                   noise=0.1 ** 2,  # the noise level (optional)
+        #                   random_state=1234)  # the random seed
+
+        def print_progress(res):
+            iteration = len(res.func_vals)
+            print(f"Step {iteration}    obj = {res.func_vals[-1]:9.7f}    params = {res.x_iters[-1]}")
+
+        res = gp_minimize(func=self.cost,
+                          dimensions=[(0, 2.0*np.pi)], callback=[print_progress], n_calls=20)
+        print(res)
+
+        plt.figure()
+        ax = plot_gaussian_process(res, n_calls=10,
+                                   objective=self.cost,
+                                   noise_level=0.1,
+                                   show_legend=True, show_title=False,
+                                   show_next_point=True, show_acq_func=True)
+
+        plt.show()
 
         # Optimization loop
         cost_history = []
@@ -124,15 +151,15 @@ class VQLS:
 
     def cost(self, weights):
         """
-      Local version of the cost function. Tends to zero when A|x> is proportional to |b>.
+        Local version of the cost function. Tends to zero when A|x> is proportional to |b>.
 
-      Args:
+        Args:
           weights (np.array): trainable parameters for the variational circuit.
 
-      Returns:
+        Returns:
           Cost function value (float)
 
-      """
+        """
 
         mu_sum = 0.0
         psi_norm = 0.0
@@ -153,7 +180,8 @@ class VQLS:
                     mu_sum += self.c[l] * np.conj(self.c[lp]) * (mu_real + 1.0j * mu_imag)
 
         # Cost function C_L
-        return 0.5 - 0.5 * abs(mu_sum) / (n_qubits * abs(psi_norm))
+
+        return float(0.5 - 0.5 * abs(mu_sum) / (n_qubits * abs(psi_norm)))
 
     def solve_classic(self):
         return np.linalg.solve(self.A, self.b)
@@ -212,7 +240,6 @@ class VQLS:
 
 
 if __name__ == "__main__":
-
     # number of qubits
     n_qubits = 2
 
@@ -226,6 +253,15 @@ if __name__ == "__main__":
 
     # init
     solver = VQLS(A=A0, b=b0)
+
+    # x = np.linspace(0, 2.0*np.pi, 200)
+    # vals = []
+    # for i in range(len(x)):
+    #     f = solver.cost([x[i]])
+    #     vals.append(f)
+    # plt.plot(x, vals)
+    # plt.show()
+
 
     # get solution of lse
     wopt = solver.opt(epochs=100)
