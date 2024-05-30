@@ -37,7 +37,7 @@ class VQLS:
                           callback=[print_progress],
                           acq_func="EI",
                           n_calls=1000)
-        print(res)
+        # print(res)
 
         # Optimization loop
         cost_history = []
@@ -241,21 +241,21 @@ if __name__ == "__main__":
     # init
     solver = VQLS(A=A0, b=b0)
 
-    # x = np.linspace(-np.pi, np.pi, 100)
-    # y = np.linspace(-np.pi, np.pi, 100)
-    #
-    # Z = np.zeros((len(x), len(y)))
-    # for i in range(len(x)):
-    #     for j in range(len(y)):
-    #         Z[i, j] = solver.cost([x[i], y[j]])
-    #
-    # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    #
-    # X, Y = np.meshgrid(x, y)
-    # ax.plot_surface(X, Y, Z, cmap='viridis')
-    # plt.show()
-    #
-    # print("f_min", min(Z))
+    x = np.linspace(-np.pi, np.pi, 100)
+    y = np.linspace(-np.pi, np.pi, 100)
+
+    Z = np.zeros((len(x), len(y)))
+    for i in range(len(x)):
+        for j in range(len(y)):
+            Z[i, j] = solver.cost([x[i], y[j]])
+
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+    X, Y = np.meshgrid(x, y)
+    ax.plot_surface(X, Y, Z, cmap='viridis')
+    plt.show()
+
+    print("f_min", min(Z))
 
     # get solution of lse
     wopt = solver.opt(epochs=100)
