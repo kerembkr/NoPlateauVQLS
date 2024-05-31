@@ -24,7 +24,7 @@ class VQLS:
         # Pauli decomposition
         self.mats, self.wires, self.c = utils.get_paulis(self.A)
 
-    def opt(self, epochs=100, eta=0.01, epochs_bo=None, ansatz="StrongEntangling", optimizer="GD"):
+    def opt(self, optimizer="GD", epochs=100, eta=0.01, epochs_bo=None, ansatz="StrongEntangling"):
 
         if ansatz == "StrongEntangling":
             self.ansatz = StrongEntangling(self.nqubits, self.nlayers)
@@ -35,13 +35,14 @@ class VQLS:
         # fast optimization
         def print_progress(res_):
             iteration = len(res_.func_vals)
-            print("{:20s}    Step {:3d}    obj = {:9.7f}".format("Bayesian Optimization", iteration, res_.func_vals[-1]))
+            print(
+                "{:20s}    Step {:3d}    obj = {:9.7f}".format("Bayesian Optimization", iteration, res_.func_vals[-1]))
 
         nweights = self.nqubits * 3 * self.nlayers
 
         dimensions = [(-np.pi, +np.pi) for i in range(nweights)]
 
-        if epochs_bo > 0:
+        if epochs_bo is not None:
             res = gp_minimize(func=self.cost,
                               dimensions=dimensions,
                               callback=[print_progress],
@@ -68,7 +69,8 @@ class VQLS:
         for it in range(epochs):
             ta = time()
             w, cost_val = opt.step_and_cost(self.cost, w)
-            print("{:21s}    Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(opt_name, it, cost_val, time() - ta))
+            print("{:21s}    Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(opt_name, it, cost_val,
+                                                                                       time() - ta))
             if np.abs(cost_val) < 1e-4:
                 break
             cost_history.append(cost_val.item())
@@ -85,7 +87,8 @@ class VQLS:
         plt.plot(cost_history, "grey", linewidth=1.5)
         print(len(range(epochs_bo, epochs_bo + epochs)))
         print(len(cost_history[epochs_bo:]))
-        plt.scatter(range(epochs_bo, epochs_bo + epochs), cost_history[epochs_bo:], c="r", linewidth=1, label="Gradient Descent")
+        plt.scatter(range(epochs_bo, epochs_bo + epochs), cost_history[epochs_bo:], c="r", linewidth=1,
+                    label=opt_name)
         plt.scatter(range(epochs_bo), cost_history[0:epochs_bo], c="g", linewidth=1, label="Bayesian Optimization")
         plt.scatter(min_index, min_value, c="y", linewidth=1, label="Best Guess")
 
@@ -282,7 +285,6 @@ class VQLS:
 
 
 if __name__ == "__main__":
-
     # number of qubits
     n_qubits = 2
 
@@ -298,5 +300,10 @@ if __name__ == "__main__":
     solver = VQLS(A=A0, b=b0, nlayers=2)
 
     # get solution of lse
-    wopt, loss = solver.opt(epochs=20, eta=1.0, epochs_bo=21, ansatz="StrongEntangling", optimizer="Adam")
+    wopt, loss = solver.opt(optimizer="Adam",
+                            epochs=50,
+                            eta=1.0,
+                            epochs_bo=30,
+                            ansatz="StrongEntangling")
+
     xopt = solver.get_state(wopt)
