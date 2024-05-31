@@ -4,10 +4,12 @@ import pennylane as qml
 import pennylane.numpy as np
 import src.utils as utils
 from skopt import gp_minimize
+from scipy.optimize import differential_evolution
 
 
 class VQLS:
     def __init__(self, A, b):
+        self.nlayers = None
         self.A = A
         self.b = b
         self.nqubits = int(np.log(len(b)) / np.log(2))
@@ -15,36 +17,57 @@ class VQLS:
 
     def opt(self, epochs, eta=0.01):
 
+        cost_history = []
+        t0 = time()
+
         # fast optimization
         def print_progress(res_):
             iteration = len(res_.func_vals)
             print(f"Step {iteration}    obj = {res_.func_vals[-1]:9.7f}    params = {res_.x_iters[-1]}")
 
+        epochs_bo = 10
+
+        self.nlayers = 2
+
+        nweights = self.nqubits * 3 * self.nlayers
+
+        dimensions = [(-np.pi, +np.pi) for i in range(nweights)]
+
         res = gp_minimize(func=self.cost,
-                          dimensions=[(-np.pi, +np.pi), (-np.pi, +np.pi)],
+                          dimensions=dimensions,
                           callback=[print_progress],
                           acq_func="EI",
-                          n_calls=50)
+                          n_calls=epochs_bo)
+
+        cost_history.append(res.func_vals.tolist())
 
         # initial guess for gradient optimizer
-        # w = res.x
         w = np.tensor(res.x, requires_grad=True)
 
         # slow optimization
         opt = qml.GradientDescentOptimizer(eta)
-        cost_history = []
-        t0 = time()
+
         for it in range(epochs):
             ta = time()
             w, cost_val = opt.step_and_cost(self.cost, w)
             print("Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(it, cost_val, time() - ta))
             if np.abs(cost_val) < 1e-4:
                 break
-            cost_history.append(cost_val)
+            cost_history.append(cost_val.item())
         print("\n Total Optimization Time: ", time() - t0, " sec")
+
+        # make one single list
+        cost_history = [item for sublist in cost_history for item in
+                        (sublist if isinstance(sublist, list) else [sublist])]
+
+        # Get the minimum value
+        min_value = min(cost_history[0:epochs_bo])
+        min_index = cost_history[0:epochs_bo].index(min_value)
+        colors = ["y" if i == min_index else "g" if i < epochs_bo else "r" for i in range(len(cost_history))]
 
         plt.figure(1)
         plt.plot(cost_history, "k", linewidth=2)
+        plt.scatter(range(len(cost_history)), cost_history, c=colors, linewidth=2)
         plt.ylabel("Cost function")
         plt.xlabel("Optimization steps")
 
@@ -120,13 +143,15 @@ class VQLS:
 
         """
 
-        for idx in range(self.nqubits):
-            qml.Hadamard(wires=idx)
+        # for idx in range(self.nqubits):
+        #     qml.Hadamard(wires=idx)
+        #
+        # for idx, element in enumerate(weights):
+        #     qml.RY(element, wires=idx)
 
-        for idx, element in enumerate(weights):
-            qml.RY(element, wires=idx)
+        weights = np.reshape(weights, (self.nlayers, self.nqubits, 3))
 
-        qml.CNOT([0, 1])
+        qml.StronglyEntanglingLayers(weights=weights, wires=range(self.nqubits))
 
     def cost(self, weights):
         """
@@ -221,7 +246,6 @@ class VQLS:
 
 
 if __name__ == "__main__":
-
     # number of qubits
     n_qubits = 2
 
@@ -237,5 +261,5 @@ if __name__ == "__main__":
     solver = VQLS(A=A0, b=b0)
 
     # get solution of lse
-    wopt = solver.opt(epochs=100, eta=0.1)
+    wopt = solver.opt(epochs=10, eta=1.0)
     xopt = solver.get_state(wopt)
