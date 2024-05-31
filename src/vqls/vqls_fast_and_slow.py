@@ -24,7 +24,7 @@ class VQLS:
         # Pauli decomposition
         self.mats, self.wires, self.c = utils.get_paulis(self.A)
 
-    def opt(self, epochs=100, eta=0.01, epochs_bo=None, ansatz="StrongEntangling"):
+    def opt(self, epochs=100, eta=0.01, epochs_bo=None, ansatz="StrongEntangling", optimizer="GD"):
 
         if ansatz == "StrongEntangling":
             self.ansatz = StrongEntangling(self.nqubits, self.nlayers)
@@ -56,8 +56,14 @@ class VQLS:
             w = np.random.randn(self.nqubits, requires_grad=True)
 
         # slow optimization
-        opt = qml.GradientDescentOptimizer(eta)
-        opt_name = "Gradient Descent"
+        if optimizer == "GD":
+            opt = qml.GradientDescentOptimizer(eta)
+            opt_name = "Gradient Descent"
+        elif optimizer == "Adam":
+            opt = qml.AdamOptimizer(eta)
+            opt_name = "Adam"
+        else:
+            raise BaseException("No Optimizer chosen!")
 
         for it in range(epochs):
             ta = time()
@@ -292,5 +298,5 @@ if __name__ == "__main__":
     solver = VQLS(A=A0, b=b0, nlayers=2)
 
     # get solution of lse
-    wopt, loss = solver.opt(epochs=20, eta=1.0, epochs_bo=21, ansatz="StrongEntangling")
+    wopt, loss = solver.opt(epochs=20, eta=1.0, epochs_bo=21, ansatz="StrongEntangling", optimizer="Adam")
     xopt = solver.get_state(wopt)
