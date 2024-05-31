@@ -1,10 +1,11 @@
+import os
 from time import time
-import matplotlib.pyplot as plt
 import pennylane as qml
-import pennylane.numpy as np
 import src.utils as utils
+import pennylane.numpy as np
 from skopt import gp_minimize
-from scipy.optimize import differential_evolution
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 
 class VQLS:
@@ -65,13 +66,31 @@ class VQLS:
         min_index = cost_history[0:epochs_bo].index(min_value)
         colors = ["y" if i == min_index else "g" if i < epochs_bo else "r" for i in range(len(cost_history))]
 
-        plt.figure(1)
-        plt.plot(cost_history, "k", linewidth=2)
-        plt.scatter(range(len(cost_history)), cost_history, c=colors, linewidth=2)
-        plt.ylabel("Cost function")
-        plt.xlabel("Optimization steps")
+        fig, ax = plt.subplots(1, 1, figsize=(7, 4))
+        plt.plot(cost_history, "grey", linewidth=1.5)
+        plt.scatter(range(len(cost_history)), cost_history, c=colors, linewidth=1)
+        ax.set_xlabel("Iteration", fontsize=15)
+        ax.set_ylabel("Cost Function", fontsize=15)
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.tick_params(direction="in", labelsize=12, length=10, width=0.8, colors='k')
+        ax.spines['top'].set_linewidth(2.0)
+        ax.spines['bottom'].set_linewidth(2.0)
+        ax.spines['left'].set_linewidth(2.0)
+        ax.spines['right'].set_linewidth(2.0)
 
-        return w
+        # Save the figure as PNG
+        output_dir = '../../output/'
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        plt.savefig(os.path.join(output_dir, 'cost_history_plot.png'))
+
+        # Save cost_history to a text file
+        with open(os.path.join(output_dir, 'cost_history.txt'), 'w') as file:
+            for cost in cost_history:
+                file.write(str(cost) + '\n')
+
+        return w, cost_history
 
     def qlayer(self, l=None, lp=None, j=None, part=None):
 
@@ -261,5 +280,5 @@ if __name__ == "__main__":
     solver = VQLS(A=A0, b=b0)
 
     # get solution of lse
-    wopt = solver.opt(epochs=10, eta=1.0)
+    wopt, loss = solver.opt(epochs=20, eta=1.0)
     xopt = solver.get_state(wopt)
