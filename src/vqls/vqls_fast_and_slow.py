@@ -24,7 +24,7 @@ class VQLS:
         # Pauli decomposition
         self.mats, self.wires, self.c = utils.get_paulis(self.A)
 
-    def opt(self, epochs=100, eta=0.01, epochs_bo=10, ansatz="StrongEntangling"):
+    def opt(self, epochs=100, eta=0.01, epochs_bo=None, ansatz="StrongEntangling"):
 
         if ansatz == "StrongEntangling":
             self.ansatz = StrongEntangling(self.nqubits, self.nlayers)
@@ -35,34 +35,34 @@ class VQLS:
         # fast optimization
         def print_progress(res_):
             iteration = len(res_.func_vals)
-            print(f"Step {iteration}    obj = {res_.func_vals[-1]:9.7f}    params = {res_.x_iters[-1]}")
-
-        # epochs_bo = 10
-
-        # self.nlayers = 2
+            print("{:20s}    Step {:3d}    obj = {:9.7f}".format("Bayesian Optimization", iteration, res_.func_vals[-1]))
 
         nweights = self.nqubits * 3 * self.nlayers
 
         dimensions = [(-np.pi, +np.pi) for i in range(nweights)]
 
-        res = gp_minimize(func=self.cost,
-                          dimensions=dimensions,
-                          callback=[print_progress],
-                          acq_func="EI",
-                          n_calls=epochs_bo)
+        if epochs_bo > 0:
+            res = gp_minimize(func=self.cost,
+                              dimensions=dimensions,
+                              callback=[print_progress],
+                              acq_func="EI",
+                              n_calls=epochs_bo)
 
-        cost_history.append(res.func_vals.tolist())
+            cost_history.append(res.func_vals.tolist())
 
-        # initial guess for gradient optimizer
-        w = np.tensor(res.x, requires_grad=True)
+            # initial guess for gradient optimizer
+            w = np.tensor(res.x, requires_grad=True)
+        else:
+            w = np.random.randn(self.nqubits, requires_grad=True)
 
         # slow optimization
         opt = qml.GradientDescentOptimizer(eta)
+        opt_name = "Gradient Descent"
 
         for it in range(epochs):
             ta = time()
             w, cost_val = opt.step_and_cost(self.cost, w)
-            print("Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(it, cost_val, time() - ta))
+            print("{:21s}    Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(opt_name, it, cost_val, time() - ta))
             if np.abs(cost_val) < 1e-4:
                 break
             cost_history.append(cost_val.item())
@@ -75,11 +75,10 @@ class VQLS:
         # Get the minimum value
         min_value = min(cost_history[0:epochs_bo])
         min_index = cost_history[0:epochs_bo].index(min_value)
-        colors = ["y" if i == min_index else "g" if i < epochs_bo else "r" for i in range(len(cost_history))]
-
         fig, ax = plt.subplots(1, 1, figsize=(8, 5))
         plt.plot(cost_history, "grey", linewidth=1.5)
-        # plt.scatter(range(len(cost_history)), cost_history, c=colors, linewidth=1)
+        print(len(range(epochs_bo, epochs_bo + epochs)))
+        print(len(cost_history[epochs_bo:]))
         plt.scatter(range(epochs_bo, epochs_bo + epochs), cost_history[epochs_bo:], c="r", linewidth=1, label="Gradient Descent")
         plt.scatter(range(epochs_bo), cost_history[0:epochs_bo], c="g", linewidth=1, label="Bayesian Optimization")
         plt.scatter(min_index, min_value, c="y", linewidth=1, label="Best Guess")
@@ -178,9 +177,10 @@ class VQLS:
 
         """
 
+        # get the right tensor shape for the weights
         weights = self.ansatz.prepare_weights(weights)
-        # weights = np.reshape(weights, (self.nlayers, self.nqubits, 3))
 
+        # apply unitary ansatz
         self.ansatz.vqc(weights=weights)
 
     def cost(self, weights):
@@ -289,8 +289,8 @@ if __name__ == "__main__":
     b0 = b0 / np.linalg.norm(b0)
 
     # init
-    solver = VQLS(A=A0, b=b0)
+    solver = VQLS(A=A0, b=b0, nlayers=2)
 
     # get solution of lse
-    wopt, loss = solver.opt(epochs=2, eta=1.0, epochs_bo=20, ansatz="StrongEntangling")
+    wopt, loss = solver.opt(epochs=20, eta=1.0, epochs_bo=21, ansatz="StrongEntangling")
     xopt = solver.get_state(wopt)
