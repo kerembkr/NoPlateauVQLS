@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from ..src.vqls import VQLS
+from src.vqls.vqls_vanilla import VQLS
 
 
 class TestQuantumSolver(unittest.TestCase):

@@ -1,7 +1,7 @@
 import os
 from time import time
 import pennylane as qml
-import src.utils as utils
+import src.utils.utils as utils
 import pennylane.numpy as np
 from skopt import gp_minimize
 import matplotlib.pyplot as plt

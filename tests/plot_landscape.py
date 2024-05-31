@@ -1,4 +1,4 @@
-from vqls import VQLS
+from src.vqls.vqls_vanilla import VQLS
 import pennylane.numpy as np
 import matplotlib.pyplot as plt
 
