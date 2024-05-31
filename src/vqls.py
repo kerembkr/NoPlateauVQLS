@@ -9,7 +9,7 @@ class VQLS:
     def __init__(self, A, b):
         self.A = A
         self.b = b
-        self.nqubits = int(np.log(len(b))/np.log(2))
+        self.n_qubits = int(np.log(len(b))/np.log(2))
 
         self.mats, self.wires, self.c = utils.get_paulis(self.A)
 
@@ -22,7 +22,7 @@ class VQLS:
         # layers = 1
 
         # initial weights for strongly entangling layers
-        w = q_delta * np.random.randn(n_qubits, requires_grad=True)
+        w = q_delta * np.random.randn(self.n_qubits, requires_grad=True)
 
         # Gradient Descent Optimization Algorithm
         opt = qml.GradientDescentOptimizer(eta)
@@ -48,7 +48,7 @@ class VQLS:
 
     def qlayer(self, l=None, lp=None, j=None, part=None):
 
-        dev_mu = qml.device("default.qubit", wires=n_qubits + 1)
+        dev_mu = qml.device("default.qubit", wires=self.n_qubits + 1)
 
         @qml.qnode(dev_mu)
         def qcircuit(weights):
@@ -64,12 +64,12 @@ class VQLS:
             """
 
             # First Hadamard gate applied to the ancillary qubit.
-            qml.Hadamard(wires=n_qubits)
+            qml.Hadamard(wires=self.n_qubits)
 
             # For estimating the imaginary part of the coefficient "mu", we must add a "-i"
             # phase gate.
             if part == "Im" or part == "im":
-                qml.PhaseShift(-np.pi / 2, wires=n_qubits)
+                qml.PhaseShift(-np.pi / 2, wires=self.n_qubits)
 
             # Variational circuit generating a guess for the solution vector |x>
             self.V(weights)
@@ -82,7 +82,7 @@ class VQLS:
 
             # Controlled Z operator at position j. If j = -1, apply the identity.
             if j != -1:
-                qml.CZ(wires=[n_qubits, j])
+                qml.CZ(wires=[self.n_qubits, j])
 
             # Unitary U_b associated to the problem vector |b>.
             self.U_b(self.b)
@@ -91,10 +91,10 @@ class VQLS:
             qml.adjoint(self.CA)(lp, self.mats, self.wires)
 
             # Second Hadamard gate applied to the ancillary qubit.
-            qml.Hadamard(wires=n_qubits)
+            qml.Hadamard(wires=self.n_qubits)
 
             # Expectation value of Z for the ancillary qubit.
-            return qml.expval(qml.PauliZ(wires=n_qubits))
+            return qml.expval(qml.PauliZ(wires=self.n_qubits))
 
         return qcircuit
 
@@ -102,13 +102,13 @@ class VQLS:
         """
         Unitary matrix rotating the ground state to the problem vector |b> = U_b |0>.
         """
-        qml.AmplitudeEmbedding(features=vec, wires=range(self.nqubits), normalize=True)  # O(n^2)
+        qml.AmplitudeEmbedding(features=vec, wires=range(self.n_qubits), normalize=True)  # O(n^2)
 
     def CA(self, idx, matrices, qubits):
         """
         Controlled versions of the unitary components A_l of the problem matrix A.
         """
-        qml.ControlledQubitUnitary(matrices[idx], control_wires=[self.nqubits], wires=qubits[idx])
+        qml.ControlledQubitUnitary(matrices[idx], control_wires=[self.n_qubits], wires=qubits[idx])
 
     def V(self, weights):
         """
@@ -116,7 +116,7 @@ class VQLS:
 
         """
 
-        for idx in range(self.nqubits):
+        for idx in range(self.n_qubits):
             qml.Hadamard(wires=idx)
 
         for idx, element in enumerate(weights):
@@ -144,7 +144,7 @@ class VQLS:
                 psi_imag = psi_imag_qnode(weights)
 
                 psi_norm += self.c[l] * np.conj(self.c[lp]) * (psi_real + 1.0j * psi_imag)
-                for j in range(0, n_qubits):
+                for j in range(0, self.n_qubits):
                     mu_real_qnode = self.qlayer(l=l, lp=lp, j=j, part="Re")
                     mu_imag_qnode = self.qlayer(l=l, lp=lp, j=j, part="Im")
                     mu_real = mu_real_qnode(weights)
@@ -153,7 +153,7 @@ class VQLS:
                     mu_sum += self.c[l] * np.conj(self.c[lp]) * (mu_real + 1.0j * mu_imag)
 
         # Cost function C_L
-        return 0.5 - 0.5 * abs(mu_sum) / (n_qubits * abs(psi_norm))
+        return 0.5 - 0.5 * abs(mu_sum) / (self.n_qubits * abs(psi_norm))
 
     def solve_classic(self):
         return np.linalg.solve(self.A, self.b)

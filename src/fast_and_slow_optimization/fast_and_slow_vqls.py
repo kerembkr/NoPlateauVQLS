@@ -11,23 +11,11 @@ class VQLS:
         self.A = A
         self.b = b
         self.nqubits = int(np.log(len(b)) / np.log(2))
-
         self.mats, self.wires, self.c = utils.get_paulis(self.A)
 
-    def opt(self, epochs):
-        # optimization configs
-        # steps = 5  # Number of optimization steps
-        eta = 0.8  # Learning rate
-        q_delta = 0.001 * np.pi  # Initial spread of random quantum weights
-        np.random.seed(0)
-        # layers = 1
+    def opt(self, epochs, eta=0.01):
 
-        # initial weights for strongly entangling layers
-        w = q_delta * np.random.randn(n_qubits, requires_grad=True)
-
-        # Gradient Descent Optimization Algorithm
-        opt = qml.GradientDescentOptimizer(eta)
-
+        # fast optimization
         def print_progress(res_):
             iteration = len(res_.func_vals)
             print(f"Step {iteration}    obj = {res_.func_vals[-1]:9.7f}    params = {res_.x_iters[-1]}")
@@ -36,10 +24,14 @@ class VQLS:
                           dimensions=[(-np.pi, +np.pi), (-np.pi, +np.pi)],
                           callback=[print_progress],
                           acq_func="EI",
-                          n_calls=1000)
-        # print(res)
+                          n_calls=50)
 
-        # Optimization loop
+        # initial guess for gradient optimizer
+        # w = res.x
+        w = np.tensor(res.x, requires_grad=True)
+
+        # slow optimization
+        opt = qml.GradientDescentOptimizer(eta)
         cost_history = []
         t0 = time()
         for it in range(epochs):
@@ -128,13 +120,13 @@ class VQLS:
 
         """
 
-        # print("nweights", len(weights))
-
         for idx in range(self.nqubits):
             qml.Hadamard(wires=idx)
 
         for idx, element in enumerate(weights):
             qml.RY(element, wires=idx)
+
+        qml.CNOT([0, 1])
 
     def cost(self, weights):
         """
@@ -167,8 +159,10 @@ class VQLS:
                     mu_sum += self.c[l] * np.conj(self.c[lp]) * (mu_real + 1.0j * mu_imag)
 
         # Cost function C_L
-
-        return float(0.5 - 0.5 * abs(mu_sum) / (n_qubits * abs(psi_norm)))
+        try:
+            return float(0.5 - 0.5 * abs(mu_sum) / (n_qubits * abs(psi_norm)))
+        except:
+            return 0.5 - 0.5 * abs(mu_sum) / (n_qubits * abs(psi_norm))
 
     def solve_classic(self):
         return np.linalg.solve(self.A, self.b)
@@ -227,6 +221,7 @@ class VQLS:
 
 
 if __name__ == "__main__":
+
     # number of qubits
     n_qubits = 2
 
@@ -241,22 +236,6 @@ if __name__ == "__main__":
     # init
     solver = VQLS(A=A0, b=b0)
 
-    x = np.linspace(-np.pi, np.pi, 100)
-    y = np.linspace(-np.pi, np.pi, 100)
-
-    Z = np.zeros((len(x), len(y)))
-    for i in range(len(x)):
-        for j in range(len(y)):
-            Z[i, j] = solver.cost([x[i], y[j]])
-
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-
-    X, Y = np.meshgrid(x, y)
-    ax.plot_surface(X, Y, Z, cmap='viridis')
-    plt.show()
-
-    print("f_min", min(Z))
-
     # get solution of lse
-    wopt = solver.opt(epochs=100)
+    wopt = solver.opt(epochs=100, eta=0.1)
     xopt = solver.get_state(wopt)
