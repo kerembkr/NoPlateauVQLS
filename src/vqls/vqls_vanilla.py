@@ -2,7 +2,7 @@ from time import time
 import pennylane as qml
 import pennylane.numpy as np
 import matplotlib.pyplot as plt
-import utils
+import src.utils.utils as utils
 
 
 class VQLS:

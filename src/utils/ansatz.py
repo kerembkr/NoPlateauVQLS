@@ -10,6 +10,9 @@ class Ansatz:
     def vqc(self, weights):
         pass
 
+    def prepare_weights(self, weights):
+        pass
+
 
 class HardwareEfficient(Ansatz):
     def __init__(self, nqubits, nlayers):
@@ -26,6 +29,9 @@ class StrongEntangling(Ansatz):
 
     def vqc(self, weights):
         qml.StronglyEntanglingLayers(weights, wires=range(self.nqubits))
+
+    def prepare_weights(self, weights):
+        return np.reshape(weights, (self.nlayers, self.nqubits, 3))
 
 
 class BasicEntangling(Ansatz):

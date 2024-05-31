@@ -6,17 +6,28 @@ import pennylane.numpy as np
 from skopt import gp_minimize
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from src.utils.ansatz import StrongEntangling
 
 
 class VQLS:
-    def __init__(self, A, b):
-        self.nlayers = None
+    def __init__(self, A, b, nlayers=1):
+
+        # linear system
         self.A = A
         self.b = b
+
+        # quantum circuit
         self.nqubits = int(np.log(len(b)) / np.log(2))
+        self.nlayers = nlayers
+        self.ansatz = None
+
+        # Pauli decomposition
         self.mats, self.wires, self.c = utils.get_paulis(self.A)
 
-    def opt(self, epochs, eta=0.01):
+    def opt(self, epochs=100, eta=0.01, epochs_bo=10, ansatz="StrongEntangling"):
+
+        if ansatz == "StrongEntangling":
+            self.ansatz = StrongEntangling(self.nqubits, self.nlayers)
 
         cost_history = []
         t0 = time()
@@ -26,9 +37,9 @@ class VQLS:
             iteration = len(res_.func_vals)
             print(f"Step {iteration}    obj = {res_.func_vals[-1]:9.7f}    params = {res_.x_iters[-1]}")
 
-        epochs_bo = 10
+        # epochs_bo = 10
 
-        self.nlayers = 2
+        # self.nlayers = 2
 
         nweights = self.nqubits * 3 * self.nlayers
 
@@ -66,9 +77,13 @@ class VQLS:
         min_index = cost_history[0:epochs_bo].index(min_value)
         colors = ["y" if i == min_index else "g" if i < epochs_bo else "r" for i in range(len(cost_history))]
 
-        fig, ax = plt.subplots(1, 1, figsize=(7, 4))
+        fig, ax = plt.subplots(1, 1, figsize=(8, 5))
         plt.plot(cost_history, "grey", linewidth=1.5)
-        plt.scatter(range(len(cost_history)), cost_history, c=colors, linewidth=1)
+        # plt.scatter(range(len(cost_history)), cost_history, c=colors, linewidth=1)
+        plt.scatter(range(epochs_bo, epochs_bo + epochs), cost_history[epochs_bo:], c="r", linewidth=1, label="Gradient Descent")
+        plt.scatter(range(epochs_bo), cost_history[0:epochs_bo], c="g", linewidth=1, label="Bayesian Optimization")
+        plt.scatter(min_index, min_value, c="y", linewidth=1, label="Best Guess")
+
         ax.set_xlabel("Iteration", fontsize=15)
         ax.set_ylabel("Cost Function", fontsize=15)
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -78,6 +93,7 @@ class VQLS:
         ax.spines['bottom'].set_linewidth(2.0)
         ax.spines['left'].set_linewidth(2.0)
         ax.spines['right'].set_linewidth(2.0)
+        ax.legend()
 
         # Save the figure as PNG
         output_dir = '../../output/'
@@ -162,15 +178,10 @@ class VQLS:
 
         """
 
-        # for idx in range(self.nqubits):
-        #     qml.Hadamard(wires=idx)
-        #
-        # for idx, element in enumerate(weights):
-        #     qml.RY(element, wires=idx)
+        weights = self.ansatz.prepare_weights(weights)
+        # weights = np.reshape(weights, (self.nlayers, self.nqubits, 3))
 
-        weights = np.reshape(weights, (self.nlayers, self.nqubits, 3))
-
-        qml.StronglyEntanglingLayers(weights=weights, wires=range(self.nqubits))
+        self.ansatz.vqc(weights=weights)
 
     def cost(self, weights):
         """
@@ -236,7 +247,7 @@ class VQLS:
         q_probs = np.round(np.bincount(samples) / n_shots, 2)
 
         # plots
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7, 4))
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 5))
         ax1.bar(np.arange(0, 2 ** n_qubits), c_probs, color="skyblue")
         ax1.set_xlim(-0.5, 2 ** n_qubits - 0.5)
         ax1.set_ylim(0.0, 1.0)
@@ -265,6 +276,7 @@ class VQLS:
 
 
 if __name__ == "__main__":
+
     # number of qubits
     n_qubits = 2
 
@@ -280,5 +292,5 @@ if __name__ == "__main__":
     solver = VQLS(A=A0, b=b0)
 
     # get solution of lse
-    wopt, loss = solver.opt(epochs=20, eta=1.0)
+    wopt, loss = solver.opt(epochs=2, eta=1.0, epochs_bo=20, ansatz="StrongEntangling")
     xopt = solver.get_state(wopt)
