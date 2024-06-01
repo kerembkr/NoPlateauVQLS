@@ -73,7 +73,7 @@ class VQLS:
             w, cost_val = opt.step_and_cost(self.cost, w)
             print("{:21s}    Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(opt_name, it, cost_val,
                                                                                        time() - ta))
-            if np.abs(cost_val) < 1e-4:
+            if np.abs(cost_val) < 1e-6:
                 break
             cost_history.append(cost_val.item())
         print("\n Total Optimization Time: ", time() - t0, " sec")
@@ -291,6 +291,7 @@ class VQLS:
 
 
 if __name__ == "__main__":
+
     # number of qubits
     n_qubits = 2
 
