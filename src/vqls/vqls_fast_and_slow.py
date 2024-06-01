@@ -6,7 +6,7 @@ import pennylane.numpy as np
 from skopt import gp_minimize
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from src.utils.ansatz import StrongEntangling
+from src.utils.ansatz import StrongEntangling, BasicEntangling, HardwareEfficient, RotY
 
 
 class VQLS:
@@ -299,7 +299,7 @@ class VQLS:
 if __name__ == "__main__":
 
     # number of qubits
-    n_qubits = 1
+    n_qubits = 2
 
     # random symmetric positive definite matrix
     M = np.random.rand(2 ** n_qubits, 2 ** n_qubits)
@@ -313,14 +313,14 @@ if __name__ == "__main__":
     solver = VQLS(A=A0, b=b0, nlayers=2)
 
     # with bayes opt
-    solver.opt(optimizer="GD",
+    solver.opt(optimizer="Nesterov",
                epochs=100,
                eta=1.0,
                epochs_bo=10,
                ansatz="StrongEntangling")
 
     # without bayes opt
-    solver.opt(optimizer="GD",
+    solver.opt(optimizer="Nesterov",
                epochs=100,
                eta=1.0,
                ansatz="StrongEntangling")
