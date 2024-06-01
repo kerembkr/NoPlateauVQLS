@@ -7,6 +7,7 @@ from skopt import gp_minimize
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from src.utils.ansatz import StrongEntangling, BasicEntangling, HardwareEfficient, RotY
+from src.optimizers.optim_qml import AdamQML, AdagradQML, GradientDescentQML, MomentumQML, NesterovMomentumQML
 
 
 class VQLS:
@@ -25,7 +26,14 @@ class VQLS:
         # Pauli decomposition
         self.mats, self.wires, self.c = utils.get_paulis(self.A)
 
-    def opt(self, optimizer="GD", epochs=100, eta=0.01, epochs_bo=None, ansatz="StrongEntangling"):
+    def opt(self, optimizer=None, epochs=100, eta=0.01, epochs_bo=None, ansatz="StrongEntangling"):
+
+        w = None
+
+        if optimizer is None:
+            optimizer = GradientDescentQML(eta=eta, tol=0.001, maxiter=20)
+
+        print(type(optimizer.name))
 
         if ansatz == "StrongEntangling":
             self.ansatz = StrongEntangling(self.nqubits, self.nlayers)
@@ -55,34 +63,26 @@ class VQLS:
             # initial guess for gradient optimizer
             w = np.tensor(res.x, requires_grad=True)
         else:
-            # w = np.random.randn(self.nqubits, requires_grad=True)
+            # w = np.random.rand(self.nqubits, requires_grad=True)
             epochs_bo = 0
 
-        # slow optimization
-        if optimizer == "GD":
-            opt = qml.GradientDescentOptimizer(eta)
-        elif optimizer == "Adam":
-            opt = qml.AdamOptimizer(eta)
-        elif optimizer == "Adagrad":
-            opt = qml.AdagradOptimizer(eta)
-        elif optimizer == "Momentum":
-            opt = qml.MomentumOptimizer(eta)
-        elif optimizer == "Nesterov":
-            opt = qml.NesterovMomentumOptimizer(eta)
-        elif optimizer == "RMSProp":
-            opt = qml.RMSPropOptimizer(eta)
-        else:
-            raise BaseException("No Optimizer chosen!")
+        w, cost_vals, iters = optimizer.optimize(self.cost, w)
 
-        for it in range(epochs):
-            ta = time()
-            w, cost_val = opt.step_and_cost(self.cost, w)
-            print("{:21s}    Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(optimizer, it, cost_val,
-                                                                                       time() - ta))
-            if np.abs(cost_val) < 1e-6:
-                break
-            cost_history.append(cost_val.item())
-        print("\n Total Optimization Time: ", time() - t0, " sec")
+        cost_history.append(cost_vals)
+
+        # for it in range(epochs):
+        #     ta = time()
+        #     # w, cost_val = opt.step_and_cost(self.cost, w)
+        #     w, cost_val = optimizer.optimize(self.cost, w)
+        #
+        #     print(optimizer.name)
+        #
+        #     print("{:21s}    Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(optimizer.name, it, cost_val,
+        #                                                                                time() - ta))
+        #     if np.abs(cost_val) < 1e-6:
+        #         break
+        #     cost_history.append(cost_val.item())
+        # print("\n Total Optimization Time: ", time() - t0, " sec")
 
         # make one single list
         cost_history = [item for sublist in cost_history for item in
@@ -95,11 +95,11 @@ class VQLS:
         fig, ax = plt.subplots(1, 1, figsize=(8, 5))
         plt.plot(cost_history, "grey", linewidth=1.5)
         try:
-            plt.scatter(range(epochs_bo, epochs_bo + it), cost_history[epochs_bo:], c="r", linewidth=1,
-                        label=optimizer)
+            plt.scatter(range(epochs_bo, epochs_bo + iters), cost_history[epochs_bo:], c="r", linewidth=1,
+                        label=optimizer.name)
         except:
             plt.scatter(range(epochs_bo, epochs_bo + epochs), cost_history[epochs_bo:], c="r", linewidth=1,
-                        label=optimizer)
+                        label=optimizer.name)
         plt.scatter(range(epochs_bo), cost_history[0:epochs_bo], c="g", linewidth=1, label="Bayesian Optimization")
         if epochs_bo > 0:
             plt.scatter(min_index, min_value, c="y", linewidth=1, label="Best Guess")
@@ -299,7 +299,7 @@ class VQLS:
 if __name__ == "__main__":
 
     # number of qubits
-    n_qubits = 2
+    n_qubits = 1
 
     # random symmetric positive definite matrix
     M = np.random.rand(2 ** n_qubits, 2 ** n_qubits)
@@ -313,18 +313,13 @@ if __name__ == "__main__":
     solver = VQLS(A=A0, b=b0, nlayers=2)
 
     # choose optimizer
+    opt = NesterovMomentumQML(eta=1.0, maxiter=10, tol=0.01)
 
     # with bayes opt
-    solver.opt(optimizer="Nesterov",
+    solver.opt(optimizer=opt,
                epochs=100,
                eta=1.0,
                epochs_bo=10,
-               ansatz="StrongEntangling")
-
-    # without bayes opt
-    solver.opt(optimizer="Nesterov",
-               epochs=100,
-               eta=1.0,
                ansatz="StrongEntangling")
 
     plt.show()
