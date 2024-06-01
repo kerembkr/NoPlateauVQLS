@@ -61,17 +61,23 @@ class VQLS:
         # slow optimization
         if optimizer == "GD":
             opt = qml.GradientDescentOptimizer(eta)
-            opt_name = "Gradient Descent"
         elif optimizer == "Adam":
             opt = qml.AdamOptimizer(eta)
-            opt_name = "Adam"
+        elif optimizer == "Adagrad":
+            opt = qml.AdagradOptimizer(eta)
+        elif optimizer == "Momentum":
+            opt = qml.MomentumOptimizer(eta)
+        elif optimizer == "Nesterov":
+            opt = qml.NesterovMomentumOptimizer(eta)
+        elif optimizer == "RMSProp":
+            opt = qml.RMSPropOptimizer(eta)
         else:
             raise BaseException("No Optimizer chosen!")
 
         for it in range(epochs):
             ta = time()
             w, cost_val = opt.step_and_cost(self.cost, w)
-            print("{:21s}    Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(opt_name, it, cost_val,
+            print("{:21s}    Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(optimizer, it, cost_val,
                                                                                        time() - ta))
             if np.abs(cost_val) < 1e-6:
                 break
@@ -90,10 +96,10 @@ class VQLS:
         plt.plot(cost_history, "grey", linewidth=1.5)
         try:
             plt.scatter(range(epochs_bo, epochs_bo + it), cost_history[epochs_bo:], c="r", linewidth=1,
-                        label=opt_name)
+                        label=optimizer)
         except:
             plt.scatter(range(epochs_bo, epochs_bo + epochs), cost_history[epochs_bo:], c="r", linewidth=1,
-                        label=opt_name)
+                        label=optimizer)
         plt.scatter(range(epochs_bo), cost_history[0:epochs_bo], c="g", linewidth=1, label="Bayesian Optimization")
         if epochs_bo > 0:
             plt.scatter(min_index, min_value, c="y", linewidth=1, label="Best Guess")
@@ -291,35 +297,32 @@ class VQLS:
 
 
 if __name__ == "__main__":
+
     # number of qubits
     n_qubits = 1
 
-    # matrix
-    # A0 = np.eye(2 ** n_qubits, 2 ** n_qubits)
-    # A0[0, 0] = 2.0
-
+    # random symmetric positive definite matrix
     M = np.random.rand(2 ** n_qubits, 2 ** n_qubits)
-
     A0 = M @ M.T
 
     # vector
-    b0 = np.ones(2 ** n_qubits)
+    b0 = np.random.rand(2 ** n_qubits)
     b0 = b0 / np.linalg.norm(b0)
 
     # init
     solver = VQLS(A=A0, b=b0, nlayers=2)
 
     # with bayes opt
-    wopt, loss = solver.opt(optimizer="GD",
-                            epochs=100,
-                            eta=1.0,
-                            epochs_bo=10,
-                            ansatz="StrongEntangling")
+    solver.opt(optimizer="GD",
+               epochs=100,
+               eta=1.0,
+               epochs_bo=10,
+               ansatz="StrongEntangling")
 
     # without bayes opt
-    wopt, loss = solver.opt(optimizer="GD",
-                            epochs=100,
-                            eta=1.0,
-                            ansatz="StrongEntangling")
+    solver.opt(optimizer="GD",
+               epochs=100,
+               eta=1.0,
+               ansatz="StrongEntangling")
 
     plt.show()
