@@ -59,7 +59,6 @@ class VQLS:
             # initial guess for gradient optimizer
             w = np.tensor(res.x, requires_grad=True)
         else:
-            # w = np.random.rand(self.nqubits, requires_grad=True)
             epochs_bo = 0
 
         w, cost_vals, iters = optimizer.optimize(self.cost, w)
@@ -72,13 +71,8 @@ class VQLS:
 
         fig, ax = plt.subplots(1, 1, figsize=(8, 5))
         plt.plot(cost_history, "grey", linewidth=1.5)
-
-        try:
-            plt.scatter(range(epochs_bo, epochs_bo + iters), cost_history[epochs_bo:], c="r", linewidth=1,
-                        label=optimizer.name)
-        except:
-            plt.scatter(range(epochs_bo, epochs_bo + epochs), cost_history[epochs_bo:], c="r", linewidth=1,
-                        label=optimizer.name)
+        plt.scatter(range(epochs_bo, epochs_bo + iters), cost_history[epochs_bo:], c="r", linewidth=1,
+                    label=optimizer.name)
         plt.scatter(range(epochs_bo), cost_history[0:epochs_bo], c="g", linewidth=1, label="Bayesian Optimization")
 
         # plot minimum bayes-opt value
@@ -284,29 +278,33 @@ if __name__ == "__main__":
     # number of qubits
     n_qubits = 1
 
-    # random symmetric positive definite matrix
-    M = np.random.rand(2 ** n_qubits, 2 ** n_qubits)
-    A0 = M @ M.T
+    # # random symmetric positive definite matrix
+    # M = np.random.rand(2 ** n_qubits, 2 ** n_qubits)
+    # A0 = M @ M.T
+    # # vector
+    # b0 = np.random.rand(2 ** n_qubits)
+    # b0 = b0 / np.linalg.norm(b0)
 
-    # vector
-    b0 = np.random.rand(2 ** n_qubits)
+    A0 = np.eye(2 ** n_qubits)
+    A0[0, 0] = 2.0
+    b0 = np.ones(2 ** n_qubits)
     b0 = b0 / np.linalg.norm(b0)
 
     # init
     solver = VQLS(A=A0, b=b0, nlayers=2)
 
     # choose optimizer
-    epochs = 100
-    epochs_bo = 10
+    ep = 100
+    ep_bo = 10
     stepsize = 1.0
     tol = 1e-5
-    opt = GradientDescentQML(eta=stepsize, maxiter=epochs, tol=tol)
+    opt = GradientDescentQML(eta=stepsize, maxiter=ep, tol=tol)
 
     # with bayes opt
     solver.opt(optimizer=opt,
-               epochs=epochs,
+               epochs=ep,
                eta=stepsize,
-               epochs_bo=epochs_bo,
+               epochs_bo=ep_bo,
                ansatz="StrongEntangling")
 
     plt.show()

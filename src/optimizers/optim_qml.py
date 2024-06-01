@@ -24,7 +24,7 @@ class OptimizerQML(ABC):
             print("Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(it, cost_val, time() - ta))
             cost_vals.append(cost_val)
             if np.abs(cost_val) < self.tol:
-                return w, cost_vals, it
+                return w, cost_vals, it+1
 
         return w, cost_vals, self.maxiter
 
