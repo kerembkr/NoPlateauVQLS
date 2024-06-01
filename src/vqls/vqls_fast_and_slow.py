@@ -1,5 +1,4 @@
 import os
-from time import time
 import pennylane as qml
 import src.utils.utils as utils
 import pennylane.numpy as np
@@ -301,7 +300,7 @@ if __name__ == "__main__":
     epochs_bo = 10
     stepsize = 1.0
     tol = 1e-5
-    opt = NesterovMomentumQML(eta=stepsize, maxiter=epochs, tol=tol)
+    opt = GradientDescentQML(eta=stepsize, maxiter=epochs, tol=tol)
 
     # with bayes opt
     solver.opt(optimizer=opt,

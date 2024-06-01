@@ -22,11 +22,11 @@ class OptimizerQML(ABC):
             ta = time()
             w, cost_val = opt.step_and_cost(func, w)
             print("Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(it, cost_val, time() - ta))
-            if np.abs(cost_val) < self.tol:
-                break
             cost_vals.append(cost_val)
+            if np.abs(cost_val) < self.tol:
+                return w, cost_vals, it
 
-        return w, cost_vals, it
+        return w, cost_vals, self.maxiter
 
     @abstractmethod
     def get_optimizer(self):
