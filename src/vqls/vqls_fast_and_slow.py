@@ -28,6 +28,7 @@ class VQLS:
 
         if ansatz == "StrongEntangling":
             self.ansatz = StrongEntangling(self.nqubits, self.nlayers)
+            w = np.random.randn(self.nqubits*self.nlayers*3, requires_grad=True)
 
         cost_history = []
         t0 = time()
@@ -54,7 +55,8 @@ class VQLS:
             # initial guess for gradient optimizer
             w = np.tensor(res.x, requires_grad=True)
         else:
-            w = np.random.randn(self.nqubits, requires_grad=True)
+            # w = np.random.randn(self.nqubits, requires_grad=True)
+            epochs_bo = 0
 
         # slow optimization
         if optimizer == "GD":
@@ -81,16 +83,20 @@ class VQLS:
                         (sublist if isinstance(sublist, list) else [sublist])]
 
         # Get the minimum value
-        min_value = min(cost_history[0:epochs_bo])
-        min_index = cost_history[0:epochs_bo].index(min_value)
+        if epochs_bo > 0:
+            min_value = min(cost_history[0:epochs_bo])
+            min_index = cost_history[0:epochs_bo].index(min_value)
         fig, ax = plt.subplots(1, 1, figsize=(8, 5))
         plt.plot(cost_history, "grey", linewidth=1.5)
-        print(len(range(epochs_bo, epochs_bo + epochs)))
-        print(len(cost_history[epochs_bo:]))
-        plt.scatter(range(epochs_bo, epochs_bo + epochs), cost_history[epochs_bo:], c="r", linewidth=1,
-                    label=opt_name)
+        try:
+            plt.scatter(range(epochs_bo, epochs_bo + it), cost_history[epochs_bo:], c="r", linewidth=1,
+                        label=opt_name)
+        except:
+            plt.scatter(range(epochs_bo, epochs_bo + epochs), cost_history[epochs_bo:], c="r", linewidth=1,
+                        label=opt_name)
         plt.scatter(range(epochs_bo), cost_history[0:epochs_bo], c="g", linewidth=1, label="Bayesian Optimization")
-        plt.scatter(min_index, min_value, c="y", linewidth=1, label="Best Guess")
+        if epochs_bo > 0:
+            plt.scatter(min_index, min_value, c="y", linewidth=1, label="Best Guess")
 
         ax.set_xlabel("Iteration", fontsize=15)
         ax.set_ylabel("Cost Function", fontsize=15)
@@ -299,11 +305,17 @@ if __name__ == "__main__":
     # init
     solver = VQLS(A=A0, b=b0, nlayers=2)
 
-    # get solution of lse
-    wopt, loss = solver.opt(optimizer="Adam",
+    # with bayes opt
+    wopt, loss = solver.opt(optimizer="GD",
                             epochs=50,
                             eta=1.0,
-                            epochs_bo=30,
+                            epochs_bo=10,
+                            ansatz="StrongEntangling")
+
+    # without bayes opt
+    wopt, loss = solver.opt(optimizer="GD",
+                            epochs=50,
+                            eta=1.0,
                             ansatz="StrongEntangling")
 
     xopt = solver.get_state(wopt)
