@@ -312,6 +312,8 @@ if __name__ == "__main__":
     # init
     solver = VQLS(A=A0, b=b0, nlayers=2)
 
+    # choose optimizer
+
     # with bayes opt
     solver.opt(optimizer="Nesterov",
                epochs=100,
