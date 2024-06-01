@@ -13,6 +13,7 @@ class VQLS:
     def __init__(self, A, b, nlayers=1):
 
         # linear system
+        self.nweights = None
         self.A = A
         self.b = b
 
@@ -28,7 +29,8 @@ class VQLS:
 
         if ansatz == "StrongEntangling":
             self.ansatz = StrongEntangling(self.nqubits, self.nlayers)
-            w = np.random.randn(self.nqubits*self.nlayers*3, requires_grad=True)
+            self.nweights = self.nqubits * 3 * self.nlayers
+            w = np.random.randn(self.nweights, requires_grad=True)
 
         cost_history = []
         t0 = time()
@@ -39,9 +41,7 @@ class VQLS:
             print(
                 "{:20s}    Step {:3d}    obj = {:9.7f}".format("Bayesian Optimization", iteration, res_.func_vals[-1]))
 
-        nweights = self.nqubits * 3 * self.nlayers
-
-        dimensions = [(-np.pi, +np.pi) for i in range(nweights)]
+        dimensions = [(-np.pi, +np.pi) for i in range(self.nweights)]
 
         if epochs_bo is not None:
             res = gp_minimize(func=self.cost,
@@ -291,13 +291,16 @@ class VQLS:
 
 
 if __name__ == "__main__":
-
     # number of qubits
-    n_qubits = 2
+    n_qubits = 1
 
     # matrix
-    A0 = np.eye(2 ** n_qubits, 2 ** n_qubits)
-    A0[0, 0] = 2.0
+    # A0 = np.eye(2 ** n_qubits, 2 ** n_qubits)
+    # A0[0, 0] = 2.0
+
+    M = np.random.rand(2 ** n_qubits, 2 ** n_qubits)
+
+    A0 = M @ M.T
 
     # vector
     b0 = np.ones(2 ** n_qubits)
@@ -308,15 +311,15 @@ if __name__ == "__main__":
 
     # with bayes opt
     wopt, loss = solver.opt(optimizer="GD",
-                            epochs=50,
+                            epochs=100,
                             eta=1.0,
                             epochs_bo=10,
                             ansatz="StrongEntangling")
 
     # without bayes opt
     wopt, loss = solver.opt(optimizer="GD",
-                            epochs=50,
+                            epochs=100,
                             eta=1.0,
                             ansatz="StrongEntangling")
 
-    xopt = solver.get_state(wopt)
+    plt.show()
