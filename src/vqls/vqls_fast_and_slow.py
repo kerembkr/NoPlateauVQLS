@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from src.utils.ansatz import StrongEntangling, BasicEntangling, HardwareEfficient, RotY
 from src.optimizers.optim_qml import AdamQML, AdagradQML, GradientDescentQML, MomentumQML, NesterovMomentumQML
+import time
 
 
 class VQLS:
@@ -41,9 +42,16 @@ class VQLS:
 
         # fast optimization
         def print_progress(res_):
+            start_time = time.time()  # Start time
             iteration = len(res_.func_vals)
+            end_time = time.time()  # End time after calculating func_vals
+            elapsed_time = end_time - start_time
+
             print(
-                "{:20s}    Step {:3d}    obj = {:9.7f}".format("Bayesian Optimization", iteration, res_.func_vals[-1]))
+                "{:20s}    Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(
+                    "Bayesian Optimization", iteration, res_.func_vals[-1], elapsed_time
+                )
+            )
 
         dimensions = [(-np.pi, +np.pi) for i in range(self.nweights)]
 
