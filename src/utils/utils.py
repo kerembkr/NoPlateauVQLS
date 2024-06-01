@@ -36,3 +36,14 @@ def get_paulis(mat):
     matrices = [qml.pauli.pauli_word_to_matrix(pw[i]) for i in range(len(pw))]
 
     return matrices, qubits, coeffs
+
+
+def get_random_ls(nqubits):
+    M = np.random.rand(2 ** nqubits, 2 ** nqubits)
+    A_ = M @ M.T
+    # vector
+    b_ = np.random.rand(2 ** nqubits)
+    b_ = b_ / np.linalg.norm(b_)
+
+    return A_, b_
+

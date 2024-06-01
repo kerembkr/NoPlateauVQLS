@@ -286,17 +286,8 @@ if __name__ == "__main__":
     # number of qubits
     n_qubits = 1
 
-    # # random symmetric positive definite matrix
-    # M = np.random.rand(2 ** n_qubits, 2 ** n_qubits)
-    # A0 = M @ M.T
-    # # vector
-    # b0 = np.random.rand(2 ** n_qubits)
-    # b0 = b0 / np.linalg.norm(b0)
-
-    A0 = np.eye(2 ** n_qubits)
-    A0[0, 0] = 2.0
-    b0 = np.ones(2 ** n_qubits)
-    b0 = b0 / np.linalg.norm(b0)
+    # random symmetric positive definite matrix
+    A0, b0 = utils.get_random_ls(n_qubits)
 
     # init
     solver = VQLS(A=A0, b=b0, nlayers=2)
