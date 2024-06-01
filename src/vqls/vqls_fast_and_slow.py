@@ -33,15 +33,12 @@ class VQLS:
         if optimizer is None:
             optimizer = GradientDescentQML(eta=eta, tol=0.001, maxiter=20)
 
-        print(type(optimizer.name))
-
         if ansatz == "StrongEntangling":
             self.ansatz = StrongEntangling(self.nqubits, self.nlayers)
             self.nweights = self.nqubits * 3 * self.nlayers
             w = np.random.randn(self.nweights, requires_grad=True)
 
         cost_history = []
-        t0 = time()
 
         # fast optimization
         def print_progress(res_):
@@ -70,30 +67,13 @@ class VQLS:
 
         cost_history.append(cost_vals)
 
-        # for it in range(epochs):
-        #     ta = time()
-        #     # w, cost_val = opt.step_and_cost(self.cost, w)
-        #     w, cost_val = optimizer.optimize(self.cost, w)
-        #
-        #     print(optimizer.name)
-        #
-        #     print("{:21s}    Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(optimizer.name, it, cost_val,
-        #                                                                                time() - ta))
-        #     if np.abs(cost_val) < 1e-6:
-        #         break
-        #     cost_history.append(cost_val.item())
-        # print("\n Total Optimization Time: ", time() - t0, " sec")
-
         # make one single list
         cost_history = [item for sublist in cost_history for item in
                         (sublist if isinstance(sublist, list) else [sublist])]
 
-        # Get the minimum value
-        if epochs_bo > 0:
-            min_value = min(cost_history[0:epochs_bo])
-            min_index = cost_history[0:epochs_bo].index(min_value)
         fig, ax = plt.subplots(1, 1, figsize=(8, 5))
         plt.plot(cost_history, "grey", linewidth=1.5)
+
         try:
             plt.scatter(range(epochs_bo, epochs_bo + iters), cost_history[epochs_bo:], c="r", linewidth=1,
                         label=optimizer.name)
@@ -101,7 +81,11 @@ class VQLS:
             plt.scatter(range(epochs_bo, epochs_bo + epochs), cost_history[epochs_bo:], c="r", linewidth=1,
                         label=optimizer.name)
         plt.scatter(range(epochs_bo), cost_history[0:epochs_bo], c="g", linewidth=1, label="Bayesian Optimization")
+
+        # plot minimum bayes-opt value
         if epochs_bo > 0:
+            min_value = min(cost_history[0:epochs_bo])
+            min_index = cost_history[0:epochs_bo].index(min_value)
             plt.scatter(min_index, min_value, c="y", linewidth=1, label="Best Guess")
 
         ax.set_xlabel("Iteration", fontsize=15)
@@ -313,13 +297,17 @@ if __name__ == "__main__":
     solver = VQLS(A=A0, b=b0, nlayers=2)
 
     # choose optimizer
-    opt = NesterovMomentumQML(eta=1.0, maxiter=10, tol=0.01)
+    epochs = 100
+    epochs_bo = 10
+    stepsize = 1.0
+    tol = 1e-5
+    opt = NesterovMomentumQML(eta=stepsize, maxiter=epochs, tol=tol)
 
     # with bayes opt
     solver.opt(optimizer=opt,
-               epochs=100,
-               eta=1.0,
-               epochs_bo=10,
+               epochs=epochs,
+               eta=stepsize,
+               epochs_bo=epochs_bo,
                ansatz="StrongEntangling")
 
     plt.show()
