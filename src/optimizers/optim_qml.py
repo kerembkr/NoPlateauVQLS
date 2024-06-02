@@ -61,9 +61,10 @@ class AdagradQML(OptimizerQML):
 
 
 class MomentumQML(OptimizerQML):
-    def __init__(self, eta, tol, maxiter):
+    def __init__(self, eta, tol, maxiter, beta):
         super().__init__(eta, tol, maxiter)
         self.name = "Momentum"
+        self.beta = beta
 
     def get_optimizer(self):
         return qml.MomentumOptimizer(self.eta)
