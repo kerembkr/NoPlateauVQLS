@@ -71,9 +71,10 @@ class MomentumQML(OptimizerQML):
 
 
 class NesterovMomentumQML(OptimizerQML):
-    def __init__(self, eta, tol, maxiter):
+    def __init__(self, eta, tol, maxiter, beta):
         super().__init__(eta, tol, maxiter)
         self.name = "Nesterov"
+        self.beta = beta
 
     def get_optimizer(self):
         return qml.NesterovMomentumOptimizer(self.eta)
