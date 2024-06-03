@@ -6,7 +6,7 @@ from skopt import gp_minimize
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from src.utils.ansatz import StrongEntangling, BasicEntangling, HardwareEfficient, RotY
-from src.optimizers.optim_qml import AdamQML, AdagradQML, GradientDescentQML, MomentumQML, NesterovMomentumQML
+from src.optimizers.optim_qml import AdamQML, AdagradQML, GradientDescentQML, MomentumQML, NesterovMomentumQML, RMSPropQML
 import time
 
 
@@ -104,7 +104,7 @@ class VQLS:
         output_dir = '../../output/'
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        plt.savefig(os.path.join(output_dir, 'cost_history_plot.png'))
+        plt.savefig(os.path.join(output_dir, optimizer.name + '.png'))
 
         # Save cost_history to a text file
         with open(os.path.join(output_dir, 'cost_history.txt'), 'w') as file:
@@ -299,13 +299,22 @@ if __name__ == "__main__":
     ep_bo = 10
     stepsize = 1.0
     tol = 1e-5
-    opt = AdamQML(eta=stepsize, maxiter=ep, tol=tol, beta1=0.9, beta2=0.99, eps=1e-8)
+    opt1 = GradientDescentQML(eta=stepsize, maxiter=ep, tol=tol)
+    opt2 = AdamQML(eta=stepsize, maxiter=ep, tol=tol, beta1=0.9, beta2=0.99, eps=1e-8)
+    opt3 = AdagradQML(eta=stepsize, maxiter=ep, tol=tol, eps=1e-8)
+    opt4 = MomentumQML(eta=stepsize, maxiter=ep, tol=tol,beta=0.9)
+    opt5 = NesterovMomentumQML(eta=stepsize, maxiter=ep, tol=tol, beta=0.9)
+    opt6 = RMSPropQML(eta=stepsize, maxiter=ep, tol=tol, decay=0.9, eps=1e-8)
 
-    # with bayes opt
-    solver.opt(optimizer=opt,
-               epochs=ep,
-               eta=stepsize,
-               epochs_bo=ep_bo,
-               ansatz="StrongEntangling")
+    opts = [opt1, opt2, opt3, opt4, opt5, opt6]
+
+    for optim in opts:
+
+        # with bayes opt
+        solver.opt(optimizer=optim,
+                   epochs=ep,
+                   eta=stepsize,
+                   epochs_bo=ep_bo,
+                   ansatz="StrongEntangling")
 
     plt.show()
