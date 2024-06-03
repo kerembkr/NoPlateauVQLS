@@ -82,9 +82,11 @@ class NesterovMomentumQML(OptimizerQML):
 
 
 class RMSPropQML(OptimizerQML):
-    def __init__(self, eta, tol, maxiter):
+    def __init__(self, eta, tol, maxiter, decay, eps):
         super().__init__(eta, tol, maxiter)
         self.name = "RMSProp"
+        self.decay = decay
+        self.eps = eps
 
     def get_optimizer(self):
-        return qml.RMSPropOptimizer(self.eta)
+        return qml.RMSPropOptimizer(stepsize=self.eta, decay=self.decay, eps=self.eps)
