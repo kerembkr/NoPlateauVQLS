@@ -283,6 +283,8 @@ class VQLS:
 
 if __name__ == "__main__":
 
+    np.random.seed(42)
+
     # number of qubits
     n_qubits = 1
 
@@ -297,8 +299,7 @@ if __name__ == "__main__":
     ep_bo = 10
     stepsize = 1.0
     tol = 1e-5
-    # opt = MomentumQML(eta=stepsize, maxiter=ep, tol=tol, beta=0.5)
-    opt = AdagradQML(eta=stepsize, maxiter=ep, tol=tol, eps=1e-8)
+    opt = AdamQML(eta=stepsize, maxiter=ep, tol=tol, beta1=0.9, beta2=0.99, eps=1e-8)
 
     # with bayes opt
     solver.opt(optimizer=opt,

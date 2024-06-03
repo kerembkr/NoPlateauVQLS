@@ -5,8 +5,7 @@ from abc import ABC, abstractmethod
 
 
 class OptimizerQML(ABC):
-    def __init__(self, eta, tol, maxiter):
-        self.eta = eta
+    def __init__(self, tol, maxiter):
         self.tol = tol
         self.maxiter = maxiter
         self.name = None
@@ -35,7 +34,8 @@ class OptimizerQML(ABC):
 
 class GradientDescentQML(OptimizerQML):
     def __init__(self, eta, tol, maxiter):
-        super().__init__(eta, tol, maxiter)
+        super().__init__(tol, maxiter)
+        self.eta = eta
         self.name = "GD"
 
     def get_optimizer(self):
@@ -43,8 +43,9 @@ class GradientDescentQML(OptimizerQML):
 
 
 class AdamQML(OptimizerQML):
-    def __init__(self, eta, tol, maxiter, beta1, beta2, eps):
-        super().__init__(eta, tol, maxiter)
+    def __init__(self, eta,  tol, maxiter, beta1, beta2, eps):
+        super().__init__(tol, maxiter)
+        self.eta = eta
         self.name = "Adam"
         self.beta1 = beta1
         self.beta2 = beta2
@@ -55,8 +56,9 @@ class AdamQML(OptimizerQML):
 
 
 class AdagradQML(OptimizerQML):
-    def __init__(self, eta, tol, maxiter, eps):
-        super().__init__(eta, tol, maxiter)
+    def __init__(self, eta,  tol, maxiter, eps):
+        super().__init__(tol, maxiter)
+        self.eta = eta
         self.name = "Adagrad"
         self.eps = eps
 
@@ -65,8 +67,9 @@ class AdagradQML(OptimizerQML):
 
 
 class MomentumQML(OptimizerQML):
-    def __init__(self, eta, tol, maxiter, beta):
-        super().__init__(eta, tol, maxiter)
+    def __init__(self, eta,  tol, maxiter, beta):
+        super().__init__(tol, maxiter)
+        self.eta = eta
         self.name = "Momentum"
         self.beta = beta
 
@@ -75,8 +78,9 @@ class MomentumQML(OptimizerQML):
 
 
 class NesterovMomentumQML(OptimizerQML):
-    def __init__(self, eta, tol, maxiter, beta):
-        super().__init__(eta, tol, maxiter)
+    def __init__(self, eta,  tol, maxiter, beta):
+        super().__init__(tol, maxiter)
+        self.eta = eta
         self.name = "Nesterov"
         self.beta = beta
 
@@ -85,8 +89,9 @@ class NesterovMomentumQML(OptimizerQML):
 
 
 class RMSPropQML(OptimizerQML):
-    def __init__(self, eta, tol, maxiter, decay, eps):
-        super().__init__(eta, tol, maxiter)
+    def __init__(self, eta,  tol, maxiter, decay, eps):
+        super().__init__(tol, maxiter)
+        self.eta = eta
         self.name = "RMSProp"
         self.decay = decay
         self.eps = eps
