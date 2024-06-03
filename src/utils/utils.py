@@ -38,7 +38,14 @@ def get_paulis(mat):
     return matrices, qubits, coeffs
 
 
-def get_random_ls(nqubits):
+def get_random_ls(nqubits, easy_example=False):
+
+    if easy_example:
+        A_ = np.eye(2 ** nqubits)
+        A_[0, 0] = 2.0
+        b_ = np.ones(2 ** nqubits)
+        return A_, b_
+
     M = np.random.rand(2 ** nqubits, 2 ** nqubits)
     A_ = M @ M.T
     # vector

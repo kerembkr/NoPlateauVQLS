@@ -9,6 +9,7 @@ from src.utils.ansatz import StrongEntangling, BasicEntangling, HardwareEfficien
 from src.optimizers.optim_qml import AdamQML, AdagradQML, GradientDescentQML, MomentumQML, NesterovMomentumQML, \
     RMSPropQML
 import time
+import seaborn as sns
 
 
 class VQLS:
@@ -285,12 +286,12 @@ class VQLS:
 
 def plot_curves(data):
 
-    fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+    # plot curves
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
     for label, cost in data.items():
         ax.plot(cost, linewidth=2.0, label=label)
-
-    ax.set_xlabel("Iteration", fontsize=15)
-    ax.set_ylabel("Cost Function", fontsize=15)
+    ax.set_xlabel("Number of Iterations", fontsize=18, labelpad=15, fontname='serif')
+    ax.set_ylabel("Cost Function Value", fontsize=18, labelpad=15,  fontname='serif')
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     ax.tick_params(direction="in", labelsize=12, length=10, width=0.8, colors='k')
@@ -299,13 +300,15 @@ def plot_curves(data):
     ax.spines['left'].set_linewidth(2.0)
     ax.spines['right'].set_linewidth(2.0)
     ax.legend()
+    legend = ax.legend(frameon=True, fontsize=12)
+    legend.get_frame().set_edgecolor('black')
+    legend.get_frame().set_linewidth(1.2)
 
-    # Save the figure as PNG
+    # Save the figure as png
     output_dir = '../../output/'
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     plt.savefig(os.path.join(output_dir, 'curves.png'))
-
 
 
 if __name__ == "__main__":
@@ -313,16 +316,16 @@ if __name__ == "__main__":
     np.random.seed(42)
 
     # number of qubits
-    n_qubits = 1
+    n_qubits = 2
 
     # random symmetric positive definite matrix
-    A0, b0 = utils.get_random_ls(n_qubits)
+    A0, b0 = utils.get_random_ls(n_qubits, easy_example=True)
 
     # init
-    solver = VQLS(A=A0, b=b0, nlayers=2)
+    solver = VQLS(A=A0, b=b0, nlayers=4)
 
     # choose optimizer
-    ep = 100
+    ep = 200
     ep_bo = None
     stepsize = 0.1
     tol = 1e-5
@@ -335,14 +338,10 @@ if __name__ == "__main__":
 
     optims = [opt1, opt2, opt3, opt4, opt5, opt6]
 
-    # cost_hists = []
     cost_hists = {}
 
     for optim in optims:
-
-        # with bayes opt
         w, cost_hist = solver.opt(optimizer=optim,
-                                  # epochs=ep,
                                   eta=stepsize,
                                   epochs_bo=ep_bo,
                                   ansatz="StrongEntangling")
