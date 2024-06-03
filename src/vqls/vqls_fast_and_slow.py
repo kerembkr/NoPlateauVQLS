@@ -6,7 +6,8 @@ from skopt import gp_minimize
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from src.utils.ansatz import StrongEntangling, BasicEntangling, HardwareEfficient, RotY
-from src.optimizers.optim_qml import AdamQML, AdagradQML, GradientDescentQML, MomentumQML, NesterovMomentumQML, RMSPropQML
+from src.optimizers.optim_qml import AdamQML, AdagradQML, GradientDescentQML, MomentumQML, NesterovMomentumQML, \
+    RMSPropQML
 import time
 
 
@@ -26,7 +27,7 @@ class VQLS:
         # Pauli decomposition
         self.mats, self.wires, self.c = utils.get_paulis(self.A)
 
-    def opt(self, optimizer=None, epochs=100, eta=0.01, epochs_bo=None, ansatz="StrongEntangling"):
+    def opt(self, optimizer=None, eta=0.01, epochs_bo=None, ansatz="StrongEntangling"):
 
         w = None
 
@@ -111,7 +112,8 @@ class VQLS:
             for cost in cost_history:
                 file.write(str(cost) + '\n')
 
-        return w, cost_history
+        # return w, cost_history
+        return w, cost_vals
 
     def qlayer(self, l=None, lp=None, j=None, part=None):
 
@@ -281,6 +283,31 @@ class VQLS:
         return state
 
 
+def plot_curves(data):
+
+    fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+    for label, cost in data.items():
+        ax.plot(cost, linewidth=2.0, label=label)
+
+    ax.set_xlabel("Iteration", fontsize=15)
+    ax.set_ylabel("Cost Function", fontsize=15)
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.tick_params(direction="in", labelsize=12, length=10, width=0.8, colors='k')
+    ax.spines['top'].set_linewidth(2.0)
+    ax.spines['bottom'].set_linewidth(2.0)
+    ax.spines['left'].set_linewidth(2.0)
+    ax.spines['right'].set_linewidth(2.0)
+    ax.legend()
+
+    # Save the figure as PNG
+    output_dir = '../../output/'
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    plt.savefig(os.path.join(output_dir, 'curves.png'))
+
+
+
 if __name__ == "__main__":
 
     np.random.seed(42)
@@ -296,25 +323,32 @@ if __name__ == "__main__":
 
     # choose optimizer
     ep = 100
-    ep_bo = 10
-    stepsize = 1.0
+    ep_bo = None
+    stepsize = 0.1
     tol = 1e-5
     opt1 = GradientDescentQML(eta=stepsize, maxiter=ep, tol=tol)
     opt2 = AdamQML(eta=stepsize, maxiter=ep, tol=tol, beta1=0.9, beta2=0.99, eps=1e-8)
     opt3 = AdagradQML(eta=stepsize, maxiter=ep, tol=tol, eps=1e-8)
-    opt4 = MomentumQML(eta=stepsize, maxiter=ep, tol=tol,beta=0.9)
+    opt4 = MomentumQML(eta=stepsize, maxiter=ep, tol=tol, beta=0.9)
     opt5 = NesterovMomentumQML(eta=stepsize, maxiter=ep, tol=tol, beta=0.9)
     opt6 = RMSPropQML(eta=stepsize, maxiter=ep, tol=tol, decay=0.9, eps=1e-8)
 
-    opts = [opt1, opt2, opt3, opt4, opt5, opt6]
+    optims = [opt1, opt2, opt3, opt4, opt5, opt6]
 
-    for optim in opts:
+    # cost_hists = []
+    cost_hists = {}
+
+    for optim in optims:
 
         # with bayes opt
-        solver.opt(optimizer=optim,
-                   epochs=ep,
-                   eta=stepsize,
-                   epochs_bo=ep_bo,
-                   ansatz="StrongEntangling")
+        w, cost_hist = solver.opt(optimizer=optim,
+                                  # epochs=ep,
+                                  eta=stepsize,
+                                  epochs_bo=ep_bo,
+                                  ansatz="StrongEntangling")
+
+        cost_hists[optim.name] = cost_hist
+
+    plot_curves(cost_hists)
 
     plt.show()
