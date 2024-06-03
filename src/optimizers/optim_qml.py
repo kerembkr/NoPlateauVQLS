@@ -67,7 +67,7 @@ class MomentumQML(OptimizerQML):
         self.beta = beta
 
     def get_optimizer(self):
-        return qml.MomentumOptimizer(self.eta)
+        return qml.MomentumOptimizer(stepsize=self.eta, momentum=self.beta)
 
 
 class NesterovMomentumQML(OptimizerQML):
