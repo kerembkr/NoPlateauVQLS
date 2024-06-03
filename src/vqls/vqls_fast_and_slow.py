@@ -297,9 +297,8 @@ if __name__ == "__main__":
     ep_bo = 10
     stepsize = 1.0
     tol = 1e-5
-    # opt = GradientDescentQML(eta=stepsize, maxiter=ep, tol=tol)
     # opt = MomentumQML(eta=stepsize, maxiter=ep, tol=tol, beta=0.5)
-    opt = NesterovMomentumQML(eta=stepsize, maxiter=ep, tol=tol, beta=0.5)
+    opt = AdagradQML(eta=stepsize, maxiter=ep, tol=tol, eps=1e-8)
 
     # with bayes opt
     solver.opt(optimizer=opt,

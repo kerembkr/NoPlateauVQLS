@@ -52,12 +52,13 @@ class AdamQML(OptimizerQML):
 
 
 class AdagradQML(OptimizerQML):
-    def __init__(self, eta, tol, maxiter):
+    def __init__(self, eta, tol, maxiter, eps):
         super().__init__(eta, tol, maxiter)
         self.name = "Adagrad"
+        self.eps = eps
 
     def get_optimizer(self):
-        return qml.AdagradOptimizer(self.eta)
+        return qml.AdagradOptimizer(stepsize=self.eta, eps=self.eps)
 
 
 class MomentumQML(OptimizerQML):
@@ -77,7 +78,7 @@ class NesterovMomentumQML(OptimizerQML):
         self.beta = beta
 
     def get_optimizer(self):
-        return qml.NesterovMomentumOptimizer(self.eta)
+        return qml.NesterovMomentumOptimizer(stepsize=self.eta, momentum=self.beta)
 
 
 class RMSPropQML(OptimizerQML):
