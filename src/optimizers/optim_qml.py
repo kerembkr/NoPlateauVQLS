@@ -43,12 +43,15 @@ class GradientDescentQML(OptimizerQML):
 
 
 class AdamQML(OptimizerQML):
-    def __init__(self, eta, tol, maxiter):
+    def __init__(self, eta, tol, maxiter, beta1, beta2, eps):
         super().__init__(eta, tol, maxiter)
         self.name = "Adam"
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.eps = eps
 
     def get_optimizer(self):
-        return qml.AdamOptimizer(self.eta)
+        return qml.AdamOptimizer(stepsize=self.eta, beta1=self.beta1, beta2=self.beta2, eps=self.eps)
 
 
 class AdagradQML(OptimizerQML):
