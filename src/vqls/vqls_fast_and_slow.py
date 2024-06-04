@@ -5,7 +5,7 @@ from src.optimizers.optim_qml import *
 import matplotlib.pyplot as plt
 
 
-class VQLS:
+class FastSlowVQLS:
     def __init__(self, A, b):
 
         # linear system
@@ -61,6 +61,27 @@ class VQLS:
         return w, cost_vals
 
     def qlayer(self, l=None, lp=None, j=None, part=None):
+        """
+        Construct a quantum node representing a layer of the quantum circuit for estimating the expectation value
+        of the ancillary qubit in the Pauli-Z basis.
+
+        Parameters
+        ----------
+        l : int, optional
+            Index of the unitary component A_l in the problem matrix A.
+        lp : int, optional
+            Index of the unitary component A_lp in the problem matrix A.
+        j : int, optional
+            Index of the qubit to apply the controlled Z operator. If -1, apply the identity.
+        part : {'Re', 'Im'}, optional
+            Specifies whether to estimate the real ('Re') or imaginary ('Im') part of the coefficient 'mu'.
+
+        Returns
+        -------
+        callable
+            Quantum circuit representing the layer of the quantum circuit.
+
+        """
 
         dev_mu = qml.device("default.qubit", wires=nqubits + 1)
 
@@ -69,12 +90,15 @@ class VQLS:
             """
             Variational circuit mapping the ground state |0> to the ansatz state |x>.
 
-            Args:
-                vec (np.array): Vector state to be embedded in a quantum state.
+            Parameters
+            ----------
+            weights : np.array
+                Trainable parameters for the variational circuit.
 
-            Returns:
-                Expectation value of ancilla qubit in Pauli-Z basis
-                :param weights:
+            Returns
+            -------
+            float
+                Expectation value of ancillary qubit in Pauli-Z basis.
             """
 
             # First Hadamard gate applied to the ancillary qubit.
@@ -348,7 +372,7 @@ if __name__ == "__main__":
     A0, b0 = utils.get_random_ls(nqubits, easy_example=True)
 
     # init
-    solver = VQLS(A=A0, b=b0)
+    solver = FastSlowVQLS(A=A0, b=b0)
 
     # choose optimizer
     optims = [GradientDescentQML(),
