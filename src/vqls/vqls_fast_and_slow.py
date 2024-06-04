@@ -302,7 +302,7 @@ if __name__ == "__main__":
     ep = 100
     ep_bo = None
     stepsize = 0.1
-    tol = 1e-5
+    tol = 1e-6
     opt1 = GradientDescentQML(eta=stepsize, maxiter=ep, tol=tol)
     opt2 = AdamQML(eta=stepsize, maxiter=ep, tol=tol, beta1=0.9, beta2=0.99, eps=1e-8)
     opt3 = AdagradQML(eta=stepsize, maxiter=ep, tol=tol, eps=1e-8)

@@ -57,16 +57,18 @@ def get_random_ls(nqubits, easy_example=False):
     return A_, b_
 
 
-def plot_costs(data, save_png=False, title=None):
+def plot_costs(data, save_png=False, title=None, log=False):
 
     # plot curves
     fig, ax = plt.subplots(1, 1, figsize=(10, 6))
     for label, cost in data.items():
         ax.plot(cost, linewidth=2.0, label=label)
-    ax.set_xlabel("Number of Iterations", fontsize=18, labelpad=15, fontname='serif')
-    ax.set_ylabel("Cost Function Value", fontsize=18, labelpad=15,  fontname='serif')
+    if log:  # logarithmic
+        ax.set_yscale('log', base=10)
+    ax.set_xlabel("Iteration", fontsize=18, labelpad=15, fontname='serif')
+    ax.set_ylabel("Cost Function", fontsize=18, labelpad=15,  fontname='serif')
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    # ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     ax.tick_params(direction="in", labelsize=12, length=10, width=0.8, colors='k')
     ax.spines['top'].set_linewidth(2.0)
     ax.spines['bottom'].set_linewidth(2.0)
