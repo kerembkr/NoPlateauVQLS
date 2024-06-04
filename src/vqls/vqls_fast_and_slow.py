@@ -1,4 +1,3 @@
-import os
 import pennylane as qml
 import src.utils.utils as utils
 import pennylane.numpy as np
@@ -6,8 +5,6 @@ from skopt import gp_minimize
 from src.utils.ansatz import StrongEntangling, BasicEntangling, HardwareEfficient, RotY
 from src.optimizers.optim_qml import AdamQML, AdagradQML, GradientDescentQML, MomentumQML, NesterovMomentumQML, \
     RMSPropQML
-import time
-from matplotlib.ticker import MaxNLocator
 import matplotlib.pyplot as plt
 
 
@@ -27,89 +24,23 @@ class VQLS:
     def opt(self, optimizer=None, ansatz=None, epochs=100, epochs_bo=None, tol=1e-4):
 
         if optimizer is None:
-            optimizer = GradientDescentQML(eta=0.1, tol=0.001, maxiter=20)
+            optimizer = GradientDescentQML()
 
         if ansatz is None:
             self.ansatz = StrongEntangling(nqubits=self.nqubits, nlayers=1)
         else:
             self.ansatz = ansatz
 
+        # initial weights
         w = self.ansatz.init_weights()
 
-        cost_history = []
-
-        # fast optimization
-        def print_progress(res_):
-            start_time = time.time()  # Start time
-            iteration = len(res_.func_vals)
-            end_time = time.time()  # End time after calculating func_vals
-            elapsed_time = end_time - start_time
-
-            print(
-                "{:20s}    Step {:3d}    obj = {:9.7f}    time = {:9.7f} sec".format(
-                    "Bayesian Optimization", iteration, res_.func_vals[-1], elapsed_time
-                )
-            )
-
-        dimensions = [(-np.pi, +np.pi) for i in range(self.ansatz.nweights)]
-
+        # global optimization
         if epochs_bo is not None:
-            res = gp_minimize(func=self.cost,
-                              dimensions=dimensions,
-                              callback=[print_progress],
-                              acq_func="EI",
-                              n_calls=epochs_bo)
+            w, _ = self.bayesopt_init(epochs_bo=epochs_bo)
 
-            cost_history.append(res.func_vals.tolist())
-
-            # initial guess for gradient optimizer
-            w = np.tensor(res.x, requires_grad=True)
-        else:
-            epochs_bo = 0
-
+        # local optimization
         w, cost_vals, iters = optimizer.optimize(func=self.cost, w=w, epochs=epochs, tol=tol)
 
-        cost_history.append(cost_vals)
-
-        # make one single list
-        cost_history = [item for sublist in cost_history for item in
-                        (sublist if isinstance(sublist, list) else [sublist])]
-
-        fig, ax = plt.subplots(1, 1, figsize=(8, 5))
-        plt.plot(cost_history, "grey", linewidth=1.5)
-        plt.scatter(range(epochs_bo, epochs_bo + iters), cost_history[epochs_bo:], c="r", linewidth=1,
-                    label=optimizer.name)
-        plt.scatter(range(epochs_bo), cost_history[0:epochs_bo], c="g", linewidth=1, label="Bayesian Optimization")
-
-        # plot minimum bayes-opt value
-        if epochs_bo > 0:
-            min_value = min(cost_history[0:epochs_bo])
-            min_index = cost_history[0:epochs_bo].index(min_value)
-            plt.scatter(min_index, min_value, c="y", linewidth=1, label="Best Guess")
-
-        ax.set_xlabel("Iteration", fontsize=15)
-        ax.set_ylabel("Cost Function", fontsize=15)
-        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.tick_params(direction="in", labelsize=12, length=10, width=0.8, colors='k')
-        ax.spines['top'].set_linewidth(2.0)
-        ax.spines['bottom'].set_linewidth(2.0)
-        ax.spines['left'].set_linewidth(2.0)
-        ax.spines['right'].set_linewidth(2.0)
-        ax.legend()
-
-        # Save the figure as PNG
-        output_dir = '../../output/'
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        plt.savefig(os.path.join(output_dir, optimizer.name + '.png'))
-
-        # Save cost_history to a text file
-        with open(os.path.join(output_dir, 'cost_history.txt'), 'w') as file:
-            for cost in cost_history:
-                file.write(str(cost) + '\n')
-
-        # return w, cost_history
         return w, cost_vals
 
     def qlayer(self, l=None, lp=None, j=None, part=None):
@@ -164,6 +95,37 @@ class VQLS:
 
         return qcircuit
 
+    def bayesopt_init(self, epochs_bo=10):
+
+        def print_progress(res_):
+            print("{:20s}    Step {:3d}    obj = {:9.7f} ".format(
+                    "Bayesian Optimization", len(res_.func_vals), res_.func_vals[-1]))
+
+        # set parameter space
+        dimensions = [(-np.pi, +np.pi) for _ in range(self.ansatz.nweights)]
+
+        print(np.shape(dimensions))
+
+        print(dimensions)
+
+        # bayesian optimization
+        res = gp_minimize(func=self.cost,
+                          dimensions=dimensions,
+                          callback=[print_progress],
+                          acq_func="EI",
+                          n_calls=epochs_bo)
+
+        # save cost function values
+        cost_hist_bo = res.func_vals.tolist()
+
+        # initial guess for gradient optimizer
+        w = np.tensor(res.x, requires_grad=True)
+
+        # reshape weights
+        w = self.ansatz.prep_weights(w)
+
+        return w, cost_hist_bo
+
     def U_b(self, vec):
         """
         Unitary matrix rotating the ground state to the problem vector |b> = U_b |0>.
@@ -181,6 +143,8 @@ class VQLS:
         Variational circuit mapping the ground state |0> to the ansatz state |x>.
 
         """
+
+        weights = self.ansatz.prep_weights(weights)
 
         # apply unitary ansatz
         self.ansatz.vqc(weights=weights)
@@ -286,6 +250,8 @@ if __name__ == "__main__":
     nqubits = 1
     nlayers = 2
 
+    epochs = 10
+
     # random symmetric positive definite matrix
     A0, b0 = utils.get_random_ls(nqubits, easy_example=True)
 
@@ -293,41 +259,27 @@ if __name__ == "__main__":
     solver = VQLS(A=A0, b=b0)
 
     # choose optimizer
-    ep = 20
-    ep_bo = None
-    stepsize = 0.1
-    tol = 1e-6
+    optims = [GradientDescentQML(),
+              AdamQML(),
+              AdagradQML(),
+              MomentumQML(),
+              NesterovMomentumQML(),
+              RMSPropQML()]
 
-    # opt1 = GradientDescentQML(eta=stepsize)
-    # opt2 = AdamQML(eta=stepsize, beta1=0.9, beta2=0.99, eps=1e-8)
-    # opt3 = AdagradQML(eta=stepsize, eps=1e-8)
-    # opt4 = MomentumQML(eta=stepsize, beta=0.9)
-    # opt5 = NesterovMomentumQML(eta=stepsize, beta=0.9)
-    # opt6 = RMSPropQML(eta=stepsize, decay=0.9, eps=1e-8)
-
-    opt1 = GradientDescentQML()
-    opt2 = AdamQML()
-    opt3 = AdagradQML()
-    opt4 = MomentumQML()
-    opt5 = NesterovMomentumQML()
-    opt6 = RMSPropQML()
-
-    optims = [opt1, opt2, opt3, opt4, opt5, opt6]
-
-    ansatz_ = BasicEntangling(nqubits=nqubits, nlayers=nlayers)
+    ansatz_ = StrongEntangling(nqubits=nqubits, nlayers=nlayers)
 
     cost_hists = {}
 
     for optim in optims:
-        w, cost_hist = solver.opt(optimizer=optim,
-                                  ansatz=ansatz_,
-                                  epochs=ep,
-                                  epochs_bo=ep_bo,
-                                  tol=0.001)
+        wopt, cost_hist = solver.opt(optimizer=optim,
+                                     ansatz=ansatz_,
+                                     epochs=epochs,
+                                     epochs_bo=10,
+                                     tol=1e-6)
 
         cost_hists[optim.name] = cost_hist
 
-    title = "{:s}   nqubits = {:d}   n_layers = {:d}".format(ansatz_.__class__.__name__, nqubits, nlayers)
+    title = "{:s}    qubits = {:d}    layers = {:d}".format(ansatz_.__class__.__name__, nqubits, nlayers)
     utils.plot_costs(data=cost_hists, save_png=True, title=title)
 
     plt.show()

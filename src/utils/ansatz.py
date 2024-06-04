@@ -17,6 +17,10 @@ class Ansatz(ABC):
     def init_weights(self):
         pass
 
+    @abstractmethod
+    def prep_weights(self, w):
+        pass
+
 
 class HardwareEfficient(Ansatz):
     def __init__(self, nqubits, nlayers):
@@ -27,6 +31,9 @@ class HardwareEfficient(Ansatz):
 
     def init_weights(self):
         raise NotImplementedError("Not implemented yet.")
+
+    def prep_weights(self, w):
+        pass
 
 
 class StrongEntangling(Ansatz):
@@ -42,6 +49,9 @@ class StrongEntangling(Ansatz):
         w = np.random.randn(self.nweights, requires_grad=True)
         return np.reshape(w, (self.nlayers, self.nqubits, 3))
 
+    def prep_weights(self, w):
+        return np.reshape(w, (self.nlayers, self.nqubits, 3))
+
 
 class BasicEntangling(Ansatz):
 
@@ -54,6 +64,9 @@ class BasicEntangling(Ansatz):
     def init_weights(self):
         self.nweights = self.nqubits * self.nlayers
         w = np.random.randn(self.nweights, requires_grad=True)
+        return np.reshape(w, (self.nlayers, self.nqubits))
+
+    def prep_weights(self, w):
         return np.reshape(w, (self.nlayers, self.nqubits))
 
 
@@ -73,15 +86,17 @@ class RotY(Ansatz):
     def init_weights(self):
         self.nweights = self.nqubits
         w = np.random.randn(self.nweights, requires_grad=True)
-        # return np.reshape(w, (self.nlayers, self.nqubits, 3))
-        return w
+        return np.reshape(w, (self.nqubits, 1))
+
+    def prep_weights(self, w):
+        return np.reshape(w, (self.nqubits, 1))
 
 
 if __name__ == "__main__":
+
     hea = RotY(nqubits=2, nlayers=2)
 
     dev = qml.device("default.qubit", wires=2)
-
 
     @qml.qnode(dev)
     def qcirc(w):
