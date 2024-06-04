@@ -29,7 +29,6 @@ class HardwareEfficient(Ansatz):
         raise NotImplementedError("Not implemented yet.")
 
 
-
 class StrongEntangling(Ansatz):
 
     def __init__(self, nqubits, nlayers):
@@ -50,7 +49,12 @@ class BasicEntangling(Ansatz):
         super().__init__(nqubits, nlayers)
 
     def vqc(self, weights):
-        qml.BasicEntanglerLayers(weights, wires=range(self.nqubits))
+        qml.BasicEntanglerLayers(weights, wires=range(self.nqubits), rotation=qml.RY)
+
+    def init_weights(self):
+        self.nweights = self.nqubits * self.nlayers
+        w = np.random.randn(self.nweights, requires_grad=True)
+        return np.reshape(w, (self.nlayers, self.nqubits))
 
 
 class RotY(Ansatz):
@@ -78,9 +82,11 @@ if __name__ == "__main__":
 
     dev = qml.device("default.qubit", wires=2)
 
+
     @qml.qnode(dev)
     def qcirc(w):
         hea.vqc(w)
         return qml.state()
+
 
     print(qml.draw(qcirc)(np.ones(2)))

@@ -15,14 +15,11 @@ class VQLS:
     def __init__(self, A, b):
 
         # linear system
-        self.nweights = None
         self.A = A
         self.b = b
 
-        # quantum circuit
+        # number of qubits
         self.nqubits = int(np.log(len(b)) / np.log(2))
-        # self.nlayers = nlayers
-        self.ansatz = None
 
         # Pauli decomposition
         self.mats, self.wires, self.c = utils.get_paulis(self.A)
@@ -290,7 +287,7 @@ if __name__ == "__main__":
 
     # number of qubits & layers
     nqubits = 1
-    nlayers = 3
+    nlayers = 2
 
     # random symmetric positive definite matrix
     A0, b0 = utils.get_random_ls(nqubits, easy_example=True)
@@ -299,7 +296,7 @@ if __name__ == "__main__":
     solver = VQLS(A=A0, b=b0)
 
     # choose optimizer
-    ep = 100
+    ep = 20
     ep_bo = None
     stepsize = 0.1
     tol = 1e-6
@@ -312,7 +309,8 @@ if __name__ == "__main__":
 
     optims = [opt1, opt2, opt3, opt4, opt5, opt6]
 
-    ansatz = RotY(nqubits=nqubits, nlayers=nlayers)
+    # ansatz = RotY(nqubits=nqubits, nlayers=nlayers)
+    ansatz = BasicEntangling(nqubits=nqubits, nlayers=nlayers)
 
     cost_hists = {}
 
@@ -325,6 +323,7 @@ if __name__ == "__main__":
 
         cost_hists[optim.name] = cost_hist
 
-    utils.plot_costs(data=cost_hists, save_png=True, title="{:s}   nqubits = {:d}   n_layers = {:d}".format(ansatz.__class__.__name__, nqubits, nlayers))
+    title = "{:s}   nqubits = {:d}   n_layers = {:d}".format(ansatz.__class__.__name__, nqubits, nlayers)
+    utils.plot_costs(data=cost_hists, save_png=True, title=title)
 
     plt.show()
