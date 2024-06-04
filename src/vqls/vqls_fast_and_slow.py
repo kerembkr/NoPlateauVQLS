@@ -22,6 +22,23 @@ class VQLS:
         self.ansatz = None
 
     def opt(self, optimizer=None, ansatz=None, epochs=100, epochs_bo=None, tol=1e-4):
+        """
+        Minimize the cost function using a Variational Quantum Circuit.
+
+        :param optimizer: Optimizer instance (default: GradientDescentQML). Examples: GradientDescent, Adam.
+        :param ansatz: Variational circuit ansatz instance (default: StrongEntangling with 1 layer).
+        :param epochs: Max steps for local optimization (default: 100).
+        :param epochs_bo: Max steps for Bayesian optimization (default: None).
+        :param tol: Convergence tolerance (default: 1e-4).
+
+        :return: Tuple (w, cost_vals):
+                 - w: Optimized weights of the quantum circuit.
+                 - cost_vals: List of cost function values during optimization.
+
+        Example:
+        --------
+        w, cost_vals = opt(optimizer=AdamOptimizer(), ansatz=HardwareEfficient(), epochs=200, tol=1e-6)
+        """
 
         if optimizer is None:
             optimizer = GradientDescentQML()
@@ -96,6 +113,25 @@ class VQLS:
         return qcircuit
 
     def bayesopt_init(self, epochs_bo=10):
+        """
+        Perform Bayesian Optimization to initialize the weights of the variational quantum circuit.
+
+        :param epochs_bo: Number of Bayesian optimization steps (default: 10).
+
+        :return: Tuple (w, cost_hist_bo):
+                 - w: Initial weights for the gradient-based optimizer.
+                 - cost_hist_bo: List of cost function values during Bayesian optimization.
+
+        Example:
+        --------
+        w, cost_hist_bo = bayesopt_init(epochs_bo=20)
+
+        Notes:
+        ------
+        - This method uses Bayesian optimization to find an initial set of weights that minimize the cost function.
+        - The optimization progress is printed at each step.
+
+        """
 
         def print_progress(res_):
             print("{:20s}    Step {:3d}    obj = {:9.7f} ".format(
@@ -124,20 +160,70 @@ class VQLS:
 
     def U_b(self, vec):
         """
-        Unitary matrix rotating the ground state to the problem vector |b> = U_b |0>.
+        Apply a unitary operation to embed the problem vector |b> into the quantum state.
+
+        This method creates a unitary matrix that rotates the ground state |0> to the problem vector |b>.
+        The operation uses amplitude embedding to encode the vector into the quantum state.
+
+        :param vec: A list or array representing the problem vector |b> to be embedded.
+                    The length of vec should be 2^n, where n is the number of qubits.
+
+        Example:
+        --------
+        vec = [0.5, 0.5, 0.5, 0.5]  # Example vector for 2 qubits
+        U_b(vec)
+
+        Notes:
+        ------
+        - This method uses the AmplitudeEmbedding function from the PennyLane library to normalize and embed the vector.
+        - Ensure that the length of vec is compatible with the number of qubits (2^n).
         """
         qml.AmplitudeEmbedding(features=vec, wires=range(self.nqubits), normalize=True)  # O(n^2)
 
     def CA(self, idx, matrices, qubits):
         """
-        Controlled versions of the unitary components A_l of the problem matrix A.
+        Apply a controlled unitary operation for the specified component of the problem matrix A.
+
+        This method applies the controlled version of a unitary matrix A_l, where the control qubit is the last qubit
+        and the target qubits are specified by the qubits parameter.
+
+        :param idx: Index of the unitary component in the matrices list.
+        :param matrices: List of unitary matrices representing components of the problem matrix A.
+        :param qubits: List of qubit indices on which each unitary matrix should act.
+
+        Example:
+        --------
+        matrices = [U1, U2, U3]  # List of unitary matrices
+        qubits = [0, 1, 2]  # Corresponding target qubits for each unitary matrix
+        CA(idx=1, matrices=matrices, qubits=qubits)
+
+        Notes:
+        ------
+        - The control qubit is assumed to be the last qubit (self.nqubits).
+        - Ensure that idx is within the range of the matrices and qubits lists.
+        - The qml.ControlledQubitUnitary function from PennyLane is used to apply the controlled unitary operation.
         """
         qml.ControlledQubitUnitary(matrices[idx], control_wires=[self.nqubits], wires=qubits[idx])
 
     def V(self, weights):
         """
-        Variational circuit mapping the ground state |0> to the ansatz state |x>.
+        Apply a variational circuit to map the ground state |0> to the ansatz state |x>.
 
+        This method uses the provided weights to prepare and apply a variational quantum circuit (VQC),
+        transforming the initial ground state |0> into the ansatz state |x>.
+
+        :param weights: A list or array of weights used for the variational circuit.
+                        These weights parameterize the quantum gates in the ansatz.
+
+        Example:
+        --------
+        weights = [0.1, 0.2, 0.3, 0.4]  # Example weights for the variational circuit
+        V(weights)
+
+        Notes:
+        ------
+        - The weights are first prepared and possibly reshaped using the ansatz's prep_weights method.
+        - The variational quantum circuit is then applied using the ansatz's vqc method.
         """
 
         weights = self.ansatz.prep_weights(weights)
@@ -147,14 +233,26 @@ class VQLS:
 
     def cost(self, weights):
         """
-        Local version of the cost function. Tends to zero when A|x> is proportional to |b>.
+        Calculate the cost function value for the current set of trainable parameters.
 
-        Args:
-          weights (np.array): trainable parameters for the variational circuit.
+        The cost function measures the proximity between the encoded state A|x> and the target state |b>.
+        It tends to zero when A|x> is proportional to |b>.
 
-        Returns:
-          Cost function value (float)
+        :param weights: Trainable parameters for the variational circuit.
 
+        :return: Cost function value (float).
+
+        Example:
+        --------
+        weights = [0.1, 0.2, 0.3, 0.4]  # Example weights for the variational circuit
+        cost_value = cost(weights)
+
+        Notes:
+        ------
+        - This method calculates the cost function by evaluating the quantum nodes for both the real and imaginary parts.
+        - It iterates over the quantum layers and qubits to compute the norm of the encoded state (psi_norm) and the
+          expectation value of the problem matrix (mu_sum).
+        - The cost function is then calculated as 0.5 - 0.5 * abs(mu_sum) / (nqubits * abs(psi_norm)).
         """
 
         mu_sum = 0.0
@@ -165,17 +263,15 @@ class VQLS:
                 psi_imag_qnode = self.qlayer(l=l, lp=lp, j=-1, part="Im")
                 psi_real = psi_real_qnode(weights)
                 psi_imag = psi_imag_qnode(weights)
-
                 psi_norm += self.c[l] * np.conj(self.c[lp]) * (psi_real + 1.0j * psi_imag)
                 for j in range(0, nqubits):
                     mu_real_qnode = self.qlayer(l=l, lp=lp, j=j, part="Re")
                     mu_imag_qnode = self.qlayer(l=l, lp=lp, j=j, part="Im")
                     mu_real = mu_real_qnode(weights)
                     mu_imag = mu_imag_qnode(weights)
-
                     mu_sum += self.c[l] * np.conj(self.c[lp]) * (mu_real + 1.0j * mu_imag)
 
-        # Cost function C_L
+        # Cost function
         try:
             return float(0.5 - 0.5 * abs(mu_sum) / (nqubits * abs(psi_norm)))
         except TypeError:
