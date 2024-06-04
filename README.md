@@ -11,10 +11,4 @@ Origins of Barren Plateaus
 Methods
 - Local Cost Function
 - Classical Deep Neural Networks
-
-To Be Implemented
-- Shallow circuits
-- Small dynamical Lie algebras
-- Variable structure ansatzes
-- Recurrent Neural Networks
-- Convolutional Neural Networks
+- Bayesian Optimization for Parameter Initialization
