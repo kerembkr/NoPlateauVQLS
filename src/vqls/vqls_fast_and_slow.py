@@ -34,9 +34,6 @@ class VQLS:
         else:
             self.ansatz = ansatz
 
-        # self.nweights = self.ansatz.nqubits * 3 * self.ansatz.nlayers
-        # w = np.random.randn(self.nweights, requires_grad=True)
-
         w = self.ansatz.init_weights()
 
         cost_history = []
@@ -300,30 +297,36 @@ if __name__ == "__main__":
     ep_bo = None
     stepsize = 0.1
     tol = 1e-6
-    opt1 = GradientDescentQML(eta=stepsize, maxiter=ep, tol=tol)
-    opt2 = AdamQML(eta=stepsize, maxiter=ep, tol=tol, beta1=0.9, beta2=0.99, eps=1e-8)
-    opt3 = AdagradQML(eta=stepsize, maxiter=ep, tol=tol, eps=1e-8)
-    opt4 = MomentumQML(eta=stepsize, maxiter=ep, tol=tol, beta=0.9)
-    opt5 = NesterovMomentumQML(eta=stepsize, maxiter=ep, tol=tol, beta=0.9)
-    opt6 = RMSPropQML(eta=stepsize, maxiter=ep, tol=tol, decay=0.9, eps=1e-8)
+    # opt1 = GradientDescentQML(eta=stepsize, maxiter=ep, tol=tol)
+    # opt2 = AdamQML(eta=stepsize, maxiter=ep, tol=tol, beta1=0.9, beta2=0.99, eps=1e-8)
+    # opt3 = AdagradQML(eta=stepsize, maxiter=ep, tol=tol, eps=1e-8)
+    # opt4 = MomentumQML(eta=stepsize, maxiter=ep, tol=tol, beta=0.9)
+    # opt5 = NesterovMomentumQML(eta=stepsize, maxiter=ep, tol=tol, beta=0.9)
+    # opt6 = RMSPropQML(eta=stepsize, maxiter=ep, tol=tol, decay=0.9, eps=1e-8)
+
+    opt1 = GradientDescentQML(eta=stepsize)
+    opt2 = AdamQML(eta=stepsize, beta1=0.9, beta2=0.99, eps=1e-8)
+    opt3 = AdagradQML(eta=stepsize, eps=1e-8)
+    opt4 = MomentumQML(eta=stepsize, beta=0.9)
+    opt5 = NesterovMomentumQML(eta=stepsize, beta=0.9)
+    opt6 = RMSPropQML(eta=stepsize, decay=0.9, eps=1e-8)
 
     optims = [opt1, opt2, opt3, opt4, opt5, opt6]
 
-    # ansatz = RotY(nqubits=nqubits, nlayers=nlayers)
-    ansatz = BasicEntangling(nqubits=nqubits, nlayers=nlayers)
+    ansatz_ = BasicEntangling(nqubits=nqubits, nlayers=nlayers)
 
     cost_hists = {}
 
     for optim in optims:
         w, cost_hist = solver.opt(optimizer=optim,
-                                  ansatz=ansatz,
+                                  ansatz=ansatz_,
                                   epochs=ep,
                                   epochs_bo=ep_bo,
                                   tol=0.001)
 
         cost_hists[optim.name] = cost_hist
 
-    title = "{:s}   nqubits = {:d}   n_layers = {:d}".format(ansatz.__class__.__name__, nqubits, nlayers)
+    title = "{:s}   nqubits = {:d}   n_layers = {:d}".format(ansatz_.__class__.__name__, nqubits, nlayers)
     utils.plot_costs(data=cost_hists, save_png=True, title=title)
 
     plt.show()
