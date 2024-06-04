@@ -5,10 +5,6 @@ from matplotlib.ticker import MaxNLocator
 import os
 
 
-def init_params():
-    raise NotImplementedError("to be implemented")
-
-
 def get_paulis(mat):
     """
   Decompose the input matrix into its Pauli components in O(4^n) time
@@ -88,7 +84,6 @@ def save_fig(name):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     plt.savefig(os.path.join(output_dir, name + ".png"))
-
 
 # def plot_fast_slow():
 #

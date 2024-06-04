@@ -1,10 +1,7 @@
-import pennylane as qml
 import src.utils.utils as utils
-import pennylane.numpy as np
 from skopt import gp_minimize
-from src.utils.ansatz import StrongEntangling, BasicEntangling, HardwareEfficient, RotY
-from src.optimizers.optim_qml import AdamQML, AdagradQML, GradientDescentQML, MomentumQML, NesterovMomentumQML, \
-    RMSPropQML
+from src.utils.ansatz import *
+from src.optimizers.optim_qml import *
 import matplotlib.pyplot as plt
 
 
@@ -20,6 +17,9 @@ class VQLS:
 
         # Pauli decomposition
         self.mats, self.wires, self.c = utils.get_paulis(self.A)
+
+        # variational circuit
+        self.ansatz = None
 
     def opt(self, optimizer=None, ansatz=None, epochs=100, epochs_bo=None, tol=1e-4):
 
@@ -104,10 +104,6 @@ class VQLS:
         # set parameter space
         dimensions = [(-np.pi, +np.pi) for _ in range(self.ansatz.nweights)]
 
-        print(np.shape(dimensions))
-
-        print(dimensions)
-
         # bayesian optimization
         res = gp_minimize(func=self.cost,
                           dimensions=dimensions,
@@ -182,7 +178,7 @@ class VQLS:
         # Cost function C_L
         try:
             return float(0.5 - 0.5 * abs(mu_sum) / (nqubits * abs(psi_norm)))
-        except:
+        except TypeError:
             return 0.5 - 0.5 * abs(mu_sum) / (nqubits * abs(psi_norm))
 
     def solve_classic(self):
@@ -250,7 +246,7 @@ if __name__ == "__main__":
     nqubits = 1
     nlayers = 2
 
-    epochs = 10
+    maxiter = 100
 
     # random symmetric positive definite matrix
     A0, b0 = utils.get_random_ls(nqubits, easy_example=True)
@@ -273,7 +269,7 @@ if __name__ == "__main__":
     for optim in optims:
         wopt, cost_hist = solver.opt(optimizer=optim,
                                      ansatz=ansatz_,
-                                     epochs=epochs,
+                                     epochs=maxiter,
                                      epochs_bo=10,
                                      tol=1e-6)
 
