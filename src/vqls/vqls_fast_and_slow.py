@@ -3,17 +3,16 @@ import pennylane as qml
 import src.utils.utils as utils
 import pennylane.numpy as np
 from skopt import gp_minimize
-import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
 from src.utils.ansatz import StrongEntangling, BasicEntangling, HardwareEfficient, RotY
 from src.optimizers.optim_qml import AdamQML, AdagradQML, GradientDescentQML, MomentumQML, NesterovMomentumQML, \
     RMSPropQML
 import time
-import seaborn as sns
+from matplotlib.ticker import MaxNLocator
+import matplotlib.pyplot as plt
 
 
 class VQLS:
-    def __init__(self, A, b, nlayers=1):
+    def __init__(self, A, b):
 
         # linear system
         self.nweights = None
@@ -22,23 +21,26 @@ class VQLS:
 
         # quantum circuit
         self.nqubits = int(np.log(len(b)) / np.log(2))
-        self.nlayers = nlayers
+        # self.nlayers = nlayers
         self.ansatz = None
 
         # Pauli decomposition
         self.mats, self.wires, self.c = utils.get_paulis(self.A)
 
-    def opt(self, optimizer=None, eta=0.01, epochs_bo=None, ansatz="StrongEntangling"):
+    def opt(self, optimizer=None, eta=0.01, epochs_bo=None, ansatz=None):
 
         w = None
 
         if optimizer is None:
             optimizer = GradientDescentQML(eta=eta, tol=0.001, maxiter=20)
 
-        if ansatz == "StrongEntangling":
-            self.ansatz = StrongEntangling(self.nqubits, self.nlayers)
-            self.nweights = self.nqubits * 3 * self.nlayers
-            w = np.random.randn(self.nweights, requires_grad=True)
+        if ansatz is None:
+            self.ansatz = StrongEntangling(nqubits=self.nqubits, nlayers=1)
+        else:
+            self.ansatz = ansatz
+
+        self.nweights = self.ansatz.nqubits * 3 * self.ansatz.nlayers
+        w = np.random.randn(self.nweights, requires_grad=True)
 
         cost_history = []
 
@@ -118,7 +120,7 @@ class VQLS:
 
     def qlayer(self, l=None, lp=None, j=None, part=None):
 
-        dev_mu = qml.device("default.qubit", wires=n_qubits + 1)
+        dev_mu = qml.device("default.qubit", wires=nqubits + 1)
 
         @qml.qnode(dev_mu)
         def qcircuit(weights):
@@ -134,12 +136,12 @@ class VQLS:
             """
 
             # First Hadamard gate applied to the ancillary qubit.
-            qml.Hadamard(wires=n_qubits)
+            qml.Hadamard(wires=nqubits)
 
             # For estimating the imaginary part of the coefficient "mu", we must add a "-i"
             # phase gate.
             if part == "Im" or part == "im":
-                qml.PhaseShift(-np.pi / 2, wires=n_qubits)
+                qml.PhaseShift(-np.pi / 2, wires=nqubits)
 
             # Variational circuit generating a guess for the solution vector |x>
             self.V(weights)
@@ -152,7 +154,7 @@ class VQLS:
 
             # Controlled Z operator at position j. If j = -1, apply the identity.
             if j != -1:
-                qml.CZ(wires=[n_qubits, j])
+                qml.CZ(wires=[nqubits, j])
 
             # Unitary U_b associated to the problem vector |b>.
             self.U_b(self.b)
@@ -161,10 +163,10 @@ class VQLS:
             qml.adjoint(self.CA)(lp, self.mats, self.wires)
 
             # Second Hadamard gate applied to the ancillary qubit.
-            qml.Hadamard(wires=n_qubits)
+            qml.Hadamard(wires=nqubits)
 
             # Expectation value of Z for the ancillary qubit.
-            return qml.expval(qml.PauliZ(wires=n_qubits))
+            return qml.expval(qml.PauliZ(wires=nqubits))
 
         return qcircuit
 
@@ -214,7 +216,7 @@ class VQLS:
                 psi_imag = psi_imag_qnode(weights)
 
                 psi_norm += self.c[l] * np.conj(self.c[lp]) * (psi_real + 1.0j * psi_imag)
-                for j in range(0, n_qubits):
+                for j in range(0, nqubits):
                     mu_real_qnode = self.qlayer(l=l, lp=lp, j=j, part="Re")
                     mu_imag_qnode = self.qlayer(l=l, lp=lp, j=j, part="Im")
                     mu_real = mu_real_qnode(weights)
@@ -224,9 +226,9 @@ class VQLS:
 
         # Cost function C_L
         try:
-            return float(0.5 - 0.5 * abs(mu_sum) / (n_qubits * abs(psi_norm)))
+            return float(0.5 - 0.5 * abs(mu_sum) / (nqubits * abs(psi_norm)))
         except:
-            return 0.5 - 0.5 * abs(mu_sum) / (n_qubits * abs(psi_norm))
+            return 0.5 - 0.5 * abs(mu_sum) / (nqubits * abs(psi_norm))
 
     def solve_classic(self):
         return np.linalg.solve(self.A, self.b)
@@ -240,7 +242,7 @@ class VQLS:
 
         # quantum probabilities
         n_shots = 10 ** 6
-        dev_x = qml.device("lightning.qubit", wires=n_qubits, shots=n_shots)
+        dev_x = qml.device("lightning.qubit", wires=nqubits, shots=n_shots)
 
         @qml.qnode(dev_x, interface="autograd")
         def prepare_and_sample(weights):
@@ -248,7 +250,7 @@ class VQLS:
             return qml.sample()
 
         raw_samples = prepare_and_sample(params)
-        if n_qubits == 1:
+        if nqubits == 1:
             raw_samples = [[_] for _ in raw_samples]
         samples = []
         for sam in raw_samples:
@@ -257,19 +259,19 @@ class VQLS:
 
         # plots
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 5))
-        ax1.bar(np.arange(0, 2 ** n_qubits), c_probs, color="skyblue")
-        ax1.set_xlim(-0.5, 2 ** n_qubits - 0.5)
+        ax1.bar(np.arange(0, 2 ** nqubits), c_probs, color="skyblue")
+        ax1.set_xlim(-0.5, 2 ** nqubits - 0.5)
         ax1.set_ylim(0.0, 1.0)
         ax1.set_xlabel("Vector space basis")
         ax1.set_title("Classical probabilities")
-        ax2.bar(np.arange(0, 2 ** n_qubits), q_probs, color="plum")
-        ax2.set_xlim(-0.5, 2 ** n_qubits - 0.5)
+        ax2.bar(np.arange(0, 2 ** nqubits), q_probs, color="plum")
+        ax2.set_xlim(-0.5, 2 ** nqubits - 0.5)
         ax2.set_ylim(0.0, 1.0)
         ax2.set_xlabel("Hilbert space basis")
         ax2.set_title("Quantum probabilities")
         plt.show()
 
-        dev_x = qml.device("lightning.qubit", wires=n_qubits, shots=None)
+        dev_x = qml.device("lightning.qubit", wires=nqubits, shots=None)
 
         @qml.qnode(dev_x)
         def prepare_and_get_state(weights):
@@ -284,48 +286,23 @@ class VQLS:
         return state
 
 
-def plot_curves(data):
-
-    # plot curves
-    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-    for label, cost in data.items():
-        ax.plot(cost, linewidth=2.0, label=label)
-    ax.set_xlabel("Number of Iterations", fontsize=18, labelpad=15, fontname='serif')
-    ax.set_ylabel("Cost Function Value", fontsize=18, labelpad=15,  fontname='serif')
-    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.tick_params(direction="in", labelsize=12, length=10, width=0.8, colors='k')
-    ax.spines['top'].set_linewidth(2.0)
-    ax.spines['bottom'].set_linewidth(2.0)
-    ax.spines['left'].set_linewidth(2.0)
-    ax.spines['right'].set_linewidth(2.0)
-    ax.legend()
-    legend = ax.legend(frameon=True, fontsize=12)
-    legend.get_frame().set_edgecolor('black')
-    legend.get_frame().set_linewidth(1.2)
-
-    # Save the figure as png
-    output_dir = '../../output/'
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    plt.savefig(os.path.join(output_dir, 'curves.png'))
-
-
 if __name__ == "__main__":
 
+    # reproducibility
     np.random.seed(42)
 
-    # number of qubits
-    n_qubits = 2
+    # number of qubits & layers
+    nqubits = 1
+    nlayers = 3
 
     # random symmetric positive definite matrix
-    A0, b0 = utils.get_random_ls(n_qubits, easy_example=True)
+    A0, b0 = utils.get_random_ls(nqubits, easy_example=True)
 
     # init
-    solver = VQLS(A=A0, b=b0, nlayers=4)
+    solver = VQLS(A=A0, b=b0)
 
     # choose optimizer
-    ep = 200
+    ep = 2
     ep_bo = None
     stepsize = 0.1
     tol = 1e-5
@@ -338,16 +315,23 @@ if __name__ == "__main__":
 
     optims = [opt1, opt2, opt3, opt4, opt5, opt6]
 
+    ansatz = StrongEntangling(nqubits=nqubits, nlayers=nlayers)
+
     cost_hists = {}
 
     for optim in optims:
+        # w, cost_hist = solver.opt(optimizer=optim,
+        #                           eta=stepsize,
+        #                           epochs_bo=ep_bo,
+        #                           ansatz=ansatz)
+
         w, cost_hist = solver.opt(optimizer=optim,
                                   eta=stepsize,
                                   epochs_bo=ep_bo,
-                                  ansatz="StrongEntangling")
+                                  ansatz=ansatz)
 
         cost_hists[optim.name] = cost_hist
 
-    plot_curves(cost_hists)
+    utils.plot_costs(data=cost_hists, save_png=True, title="{:s}   nqubits = {:d}   n_layers = {:d}".format(ansatz.__class__.__name__, nqubits, nlayers))
 
     plt.show()

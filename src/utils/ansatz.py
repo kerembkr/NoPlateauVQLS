@@ -6,6 +6,7 @@ class Ansatz:
     def __init__(self, nqubits, nlayers):
         self.nqubits = nqubits
         self.nlayers = nlayers
+        self.name = None
 
     def vqc(self, weights):
         pass

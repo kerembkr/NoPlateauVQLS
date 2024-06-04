@@ -1,6 +1,8 @@
 import pennylane as qml
 import pennylane.numpy as np
-
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
+import os
 
 def init_params():
     raise NotImplementedError("to be implemented")
@@ -54,3 +56,31 @@ def get_random_ls(nqubits, easy_example=False):
 
     return A_, b_
 
+
+def plot_costs(data, save_png=False, title=None):
+
+    # plot curves
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    for label, cost in data.items():
+        ax.plot(cost, linewidth=2.0, label=label)
+    ax.set_xlabel("Number of Iterations", fontsize=18, labelpad=15, fontname='serif')
+    ax.set_ylabel("Cost Function Value", fontsize=18, labelpad=15,  fontname='serif')
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.tick_params(direction="in", labelsize=12, length=10, width=0.8, colors='k')
+    ax.spines['top'].set_linewidth(2.0)
+    ax.spines['bottom'].set_linewidth(2.0)
+    ax.spines['left'].set_linewidth(2.0)
+    ax.spines['right'].set_linewidth(2.0)
+    ax.legend()
+    legend = ax.legend(frameon=True, fontsize=12)
+    legend.get_frame().set_edgecolor('black')
+    legend.get_frame().set_linewidth(1.2)
+    if title is not None:
+        ax.set_title(title, fontsize=18, fontname='serif')
+
+    if save_png:
+        output_dir = '../../output/'
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        plt.savefig(os.path.join(output_dir, 'curves.png'))
