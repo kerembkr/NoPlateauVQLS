@@ -1,17 +1,20 @@
 import pennylane as qml
 import pennylane.numpy as np
+from abc import ABC, abstractmethod
 
 
-class Ansatz:
+class Ansatz(ABC):
     def __init__(self, nqubits, nlayers):
         self.nqubits = nqubits
         self.nlayers = nlayers
-        self.name = None
+        self.nweights = None
 
+    @abstractmethod
     def vqc(self, weights):
         pass
 
-    def prepare_weights(self, weights):
+    @abstractmethod
+    def init_weights(self):
         pass
 
 
@@ -22,6 +25,10 @@ class HardwareEfficient(Ansatz):
     def vqc(self, weights):
         raise NotImplementedError("Not implemented yet.")
 
+    def init_weights(self):
+        raise NotImplementedError("Not implemented yet.")
+
+
 
 class StrongEntangling(Ansatz):
 
@@ -31,8 +38,10 @@ class StrongEntangling(Ansatz):
     def vqc(self, weights):
         qml.StronglyEntanglingLayers(weights, wires=range(self.nqubits))
 
-    def prepare_weights(self, weights):
-        return np.reshape(weights, (self.nlayers, self.nqubits, 3))
+    def init_weights(self):
+        self.nweights = self.nqubits * 3 * self.nlayers
+        w = np.random.randn(self.nweights, requires_grad=True)
+        return np.reshape(w, (self.nlayers, self.nqubits, 3))
 
 
 class BasicEntangling(Ansatz):
@@ -56,6 +65,12 @@ class RotY(Ansatz):
 
         for i in range(self.nqubits):
             qml.RY(weights[i], wires=i)
+
+    def init_weights(self):
+        self.nweights = self.nqubits
+        w = np.random.randn(self.nweights, requires_grad=True)
+        # return np.reshape(w, (self.nlayers, self.nqubits, 3))
+        return w
 
 
 if __name__ == "__main__":

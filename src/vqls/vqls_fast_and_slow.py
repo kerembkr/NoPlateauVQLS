@@ -29,8 +29,6 @@ class VQLS:
 
     def opt(self, optimizer=None, ansatz=None, epochs=100, epochs_bo=None, tol=1e-4):
 
-        w = None
-
         if optimizer is None:
             optimizer = GradientDescentQML(eta=0.1, tol=0.001, maxiter=20)
 
@@ -39,8 +37,10 @@ class VQLS:
         else:
             self.ansatz = ansatz
 
-        self.nweights = self.ansatz.nqubits * 3 * self.ansatz.nlayers
-        w = np.random.randn(self.nweights, requires_grad=True)
+        # self.nweights = self.ansatz.nqubits * 3 * self.ansatz.nlayers
+        # w = np.random.randn(self.nweights, requires_grad=True)
+
+        w = self.ansatz.init_weights()
 
         cost_history = []
 
@@ -57,7 +57,7 @@ class VQLS:
                 )
             )
 
-        dimensions = [(-np.pi, +np.pi) for i in range(self.nweights)]
+        dimensions = [(-np.pi, +np.pi) for i in range(self.ansatz.nweights)]
 
         if epochs_bo is not None:
             res = gp_minimize(func=self.cost,
@@ -188,9 +188,6 @@ class VQLS:
 
         """
 
-        # get the right tensor shape for the weights
-        weights = self.ansatz.prepare_weights(weights)
-
         # apply unitary ansatz
         self.ansatz.vqc(weights=weights)
 
@@ -302,7 +299,7 @@ if __name__ == "__main__":
     solver = VQLS(A=A0, b=b0)
 
     # choose optimizer
-    ep = 2
+    ep = 100
     ep_bo = None
     stepsize = 0.1
     tol = 1e-5
@@ -315,7 +312,7 @@ if __name__ == "__main__":
 
     optims = [opt1, opt2, opt3, opt4, opt5, opt6]
 
-    ansatz = StrongEntangling(nqubits=nqubits, nlayers=nlayers)
+    ansatz = RotY(nqubits=nqubits, nlayers=nlayers)
 
     cost_hists = {}
 
