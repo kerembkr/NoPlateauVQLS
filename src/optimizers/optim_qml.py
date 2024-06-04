@@ -31,7 +31,7 @@ class OptimizerQML(ABC):
 
 
 class GradientDescentQML(OptimizerQML):
-    def __init__(self, eta):
+    def __init__(self, eta=0.1):
         super().__init__()
         self.eta = eta
         self.name = "GD"
@@ -41,7 +41,7 @@ class GradientDescentQML(OptimizerQML):
 
 
 class AdamQML(OptimizerQML):
-    def __init__(self, eta, beta1, beta2, eps):
+    def __init__(self, eta=0.1, beta1=0.9, beta2=0.99, eps=1e-8):
         super().__init__()
         self.eta = eta
         self.name = "Adam"
@@ -54,7 +54,7 @@ class AdamQML(OptimizerQML):
 
 
 class AdagradQML(OptimizerQML):
-    def __init__(self, eta, eps):
+    def __init__(self, eta=0.1, eps=1e-8):
         super().__init__()
         self.eta = eta
         self.name = "Adagrad"
@@ -65,7 +65,7 @@ class AdagradQML(OptimizerQML):
 
 
 class MomentumQML(OptimizerQML):
-    def __init__(self, eta, beta):
+    def __init__(self, eta=0.1, beta=0.9):
         super().__init__()
         self.eta = eta
         self.name = "Momentum"
@@ -76,7 +76,7 @@ class MomentumQML(OptimizerQML):
 
 
 class NesterovMomentumQML(OptimizerQML):
-    def __init__(self, eta, beta):
+    def __init__(self, eta=0.1, beta=0.9):
         super().__init__()
         self.eta = eta
         self.name = "Nesterov"
@@ -87,7 +87,7 @@ class NesterovMomentumQML(OptimizerQML):
 
 
 class RMSPropQML(OptimizerQML):
-    def __init__(self, eta, decay, eps):
+    def __init__(self, eta=0.1, decay=0.9, eps=1e-8):
         super().__init__()
         self.eta = eta
         self.name = "RMSProp"

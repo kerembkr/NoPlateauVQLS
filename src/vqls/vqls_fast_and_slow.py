@@ -297,19 +297,20 @@ if __name__ == "__main__":
     ep_bo = None
     stepsize = 0.1
     tol = 1e-6
-    # opt1 = GradientDescentQML(eta=stepsize, maxiter=ep, tol=tol)
-    # opt2 = AdamQML(eta=stepsize, maxiter=ep, tol=tol, beta1=0.9, beta2=0.99, eps=1e-8)
-    # opt3 = AdagradQML(eta=stepsize, maxiter=ep, tol=tol, eps=1e-8)
-    # opt4 = MomentumQML(eta=stepsize, maxiter=ep, tol=tol, beta=0.9)
-    # opt5 = NesterovMomentumQML(eta=stepsize, maxiter=ep, tol=tol, beta=0.9)
-    # opt6 = RMSPropQML(eta=stepsize, maxiter=ep, tol=tol, decay=0.9, eps=1e-8)
 
-    opt1 = GradientDescentQML(eta=stepsize)
-    opt2 = AdamQML(eta=stepsize, beta1=0.9, beta2=0.99, eps=1e-8)
-    opt3 = AdagradQML(eta=stepsize, eps=1e-8)
-    opt4 = MomentumQML(eta=stepsize, beta=0.9)
-    opt5 = NesterovMomentumQML(eta=stepsize, beta=0.9)
-    opt6 = RMSPropQML(eta=stepsize, decay=0.9, eps=1e-8)
+    # opt1 = GradientDescentQML(eta=stepsize)
+    # opt2 = AdamQML(eta=stepsize, beta1=0.9, beta2=0.99, eps=1e-8)
+    # opt3 = AdagradQML(eta=stepsize, eps=1e-8)
+    # opt4 = MomentumQML(eta=stepsize, beta=0.9)
+    # opt5 = NesterovMomentumQML(eta=stepsize, beta=0.9)
+    # opt6 = RMSPropQML(eta=stepsize, decay=0.9, eps=1e-8)
+
+    opt1 = GradientDescentQML()
+    opt2 = AdamQML()
+    opt3 = AdagradQML()
+    opt4 = MomentumQML()
+    opt5 = NesterovMomentumQML()
+    opt6 = RMSPropQML()
 
     optims = [opt1, opt2, opt3, opt4, opt5, opt6]
 
