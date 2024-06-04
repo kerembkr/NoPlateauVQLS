@@ -10,7 +10,7 @@ class OptimizerQML(ABC):
         self.maxiter = maxiter
         self.name = None
 
-    def optimize(self, func, w):
+    def optimize(self, func, w, epochs, tol):
 
         # Get the optimizer from the child class
         opt = self.get_optimizer()

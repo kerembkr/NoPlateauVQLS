@@ -27,12 +27,12 @@ class VQLS:
         # Pauli decomposition
         self.mats, self.wires, self.c = utils.get_paulis(self.A)
 
-    def opt(self, optimizer=None, eta=0.01, epochs_bo=None, ansatz=None):
+    def opt(self, optimizer=None, ansatz=None, epochs=100, epochs_bo=None, tol=1e-4):
 
         w = None
 
         if optimizer is None:
-            optimizer = GradientDescentQML(eta=eta, tol=0.001, maxiter=20)
+            optimizer = GradientDescentQML(eta=0.1, tol=0.001, maxiter=20)
 
         if ansatz is None:
             self.ansatz = StrongEntangling(nqubits=self.nqubits, nlayers=1)
@@ -73,7 +73,7 @@ class VQLS:
         else:
             epochs_bo = 0
 
-        w, cost_vals, iters = optimizer.optimize(self.cost, w)
+        w, cost_vals, iters = optimizer.optimize(func=self.cost, w=w, epochs=epochs, tol=tol)
 
         cost_history.append(cost_vals)
 
@@ -320,15 +320,11 @@ if __name__ == "__main__":
     cost_hists = {}
 
     for optim in optims:
-        # w, cost_hist = solver.opt(optimizer=optim,
-        #                           eta=stepsize,
-        #                           epochs_bo=ep_bo,
-        #                           ansatz=ansatz)
-
         w, cost_hist = solver.opt(optimizer=optim,
-                                  eta=stepsize,
+                                  ansatz=ansatz,
+                                  epochs=ep,
                                   epochs_bo=ep_bo,
-                                  ansatz=ansatz)
+                                  tol=0.001)
 
         cost_hists[optim.name] = cost_hist
 
