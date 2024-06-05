@@ -377,10 +377,10 @@ if __name__ == "__main__":
     np.random.seed(42)
 
     # number of qubits & layers
-    nqubits = 1
+    nqubits = 2
     nlayers = 2
 
-    maxiter = 10
+    maxiter = 100
 
     # random symmetric positive definite matrix
     A0, b0 = utils.get_random_ls(nqubits, easy_example=True)
