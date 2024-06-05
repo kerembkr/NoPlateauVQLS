@@ -1,6 +1,7 @@
 import src.utils.utils as utils
 from skopt import gp_minimize
 from src.utils.ansatz import *
+from src.utils.embedding import *
 from src.optimizers.optim_qml import *
 import matplotlib.pyplot as plt
 
@@ -18,13 +19,16 @@ class FastSlowVQLS:
         # Pauli decomposition
         self.mats, self.wires, self.c = utils.get_paulis(self.A)
 
-        # variational circuit
+        # quantum circuit
+        self.optimizer = None
+        self.stateprep = None
         self.ansatz = None
 
-    def opt(self, optimizer=None, ansatz=None, epochs=100, epochs_bo=None, tol=1e-4):
+    def opt(self, optimizer=None, ansatz=None, stateprep=None, epochs=100, epochs_bo=None, tol=1e-4):
         """
         Minimize the cost function using a Variational Quantum Circuit.
 
+        :param stateprep: State Preparation of the quantum state |b>
         :param optimizer: Optimizer instance (default: GradientDescentQML). Examples: GradientDescent, Adam.
         :param ansatz: Variational circuit ansatz instance (default: StrongEntangling with 1 layer).
         :param epochs: Max steps for local optimization (default: 100).
@@ -41,12 +45,19 @@ class FastSlowVQLS:
         """
 
         if optimizer is None:
-            optimizer = GradientDescentQML()
+            self.optimizer = GradientDescentQML()
+        else:
+            self.optimizer = optimizer
 
         if ansatz is None:
             self.ansatz = StrongEntangling(nqubits=self.nqubits, nlayers=1)
         else:
             self.ansatz = ansatz
+
+        if stateprep is None:
+            self.stateprep = AmplitudeEmbedding(wires=range(self.nqubits))
+        else:
+            self.stateprep = stateprep
 
         # initial weights
         w = self.ansatz.init_weights()
@@ -56,7 +67,7 @@ class FastSlowVQLS:
             w, _ = self.bayesopt_init(epochs_bo=epochs_bo)
 
         # local optimization
-        w, cost_vals, iters = optimizer.optimize(func=self.cost, w=w, epochs=epochs, tol=tol)
+        w, cost_vals, iters = self.optimizer.optimize(func=self.cost, w=w, epochs=epochs, tol=tol)
 
         return w, cost_vals
 
@@ -202,7 +213,8 @@ class FastSlowVQLS:
         - This method uses the AmplitudeEmbedding function from the PennyLane library to normalize and embed the vector.
         - Ensure that the length of vec is compatible with the number of qubits (2^n).
         """
-        qml.AmplitudeEmbedding(features=vec, wires=range(self.nqubits), normalize=True)  # O(n^2)
+        # qml.AmplitudeEmbedding(features=vec, wires=range(self.nqubits), normalize=True)  # O(n^2)
+        self.stateprep.prep(vec=vec)
 
     def CA(self, idx, matrices, qubits):
         """
@@ -384,13 +396,16 @@ if __name__ == "__main__":
 
     ansatz_ = StrongEntangling(nqubits=nqubits, nlayers=nlayers)
 
+    prep_ = AmplitudeEmbedding(wires=range(nqubits))
+
     cost_hists = {}
 
     for optim in optims:
         wopt, cost_hist = solver.opt(optimizer=optim,
                                      ansatz=ansatz_,
+                                     stateprep=prep_,
                                      epochs=maxiter,
-                                     epochs_bo=10,
+                                     epochs_bo=None,
                                      tol=1e-6)
 
         cost_hists[optim.name] = cost_hist
