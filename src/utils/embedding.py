@@ -1,11 +1,13 @@
 import pennylane as qml
 import pennylane.numpy as np
+from abc import ABC, abstractmethod
 
 
-class StatePrep:
+class StatePrep(ABC):
     def __init__(self, wires):
         self.wires = wires
 
+    @abstractmethod
     def prep(self, weights):
         pass
 
