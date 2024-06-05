@@ -4,6 +4,7 @@ from src.utils.ansatz import *
 from src.utils.embedding import *
 from src.optimizers.optim_qml import *
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 
 class FastSlowVQLS:
@@ -329,10 +330,8 @@ class FastSlowVQLS:
             self.V(weights)
             return qml.sample()
 
-        # fig, axs = plt.subplots(len(params_opt.items()), 2, figsize=(8, 35))
-        fig, axs = plt.subplots(len(params_opt.items()), 2)
+        fig, axs = plt.subplots(len(params_opt.items()), 2, figsize=(14, 6))
 
-        # for label, params in params_opt.items():
         for i, (label, params) in enumerate(params_opt.items()):
 
             raw_samples = prepare_and_sample(params)
@@ -343,17 +342,28 @@ class FastSlowVQLS:
                 samples.append(int("".join(str(bs) for bs in sam), base=2))
             q_probs = np.round(np.bincount(samples) / nshots, 2)
 
-            # plots
-            axs[i,0].bar(np.arange(0, 2 ** nqubits), c_probs, color="skyblue")
-            axs[i,0].set_xlim(-0.5, 2 ** nqubits - 0.5)
-            axs[i,0].set_ylim(0.0, 1.0)
-            axs[i,0].set_xlabel("Vector space basis")
-            axs[i,0].set_title("Classical probabilities")
-            axs[i,1].bar(np.arange(0, 2 ** nqubits), q_probs, color="plum")
-            axs[i,1].set_xlim(-0.5, 2 ** nqubits - 0.5)
-            axs[i,1].set_ylim(0.0, 1.0)
-            axs[i,1].set_xlabel("Hilbert space basis")
-            axs[i,1].set_title("Quantum probabilities")
+            axs[i, 0].xaxis.set_major_locator(MaxNLocator(integer=True))
+            axs[i, 1].xaxis.set_major_locator(MaxNLocator(integer=True))
+
+            # plot probabilities
+            axs[i, 0].bar(np.arange(0, 2 ** nqubits), c_probs, color="skyblue")
+            axs[i, 1].bar(np.arange(0, 2 ** nqubits), q_probs, color="plum")
+
+            if i == len(params_opt.items())-1:
+                axs[i, 0].set_xlabel("Vector space basis", fontsize=18, fontname='serif')
+                axs[i, 1].set_xlabel("Hilbert space basis", fontsize=18, fontname='serif')
+
+            if i == 0:
+                axs[i, 1].set_title("Quantum probabilities", fontsize=18, fontname='serif')
+                axs[i, 0].set_title("Classical probabilities", fontsize=18, fontname='serif')
+
+            # Add optimizer name next to the right plot
+            axs[i, 1].annotate(label, xy=(1.05, 0.5), xycoords='axes fraction', va='center', fontsize=18, fontname='serif')
+
+            # Remove x axis ticks except for the lowest plot
+            if i < len(params_opt.items()) - 1:
+                axs[i, 0].set_xticklabels([])
+                axs[i, 1].set_xticklabels([])
 
 
 
