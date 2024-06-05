@@ -368,7 +368,7 @@ class FastSlowVQLS:
                 axs[i, 0].set_xticklabels([])
                 axs[i, 1].set_xticklabels([])
 
-        plt.show()
+        utils.save_fig("probs")
 
 
 if __name__ == "__main__":
@@ -421,4 +421,4 @@ if __name__ == "__main__":
 
     solver.plot_probs(wopts)
 
-    plt.show()
+    # plt.show()
