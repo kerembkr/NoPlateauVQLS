@@ -330,12 +330,14 @@ class FastSlowVQLS:
             self.V(weights)
             return qml.sample()
 
-        fig, axs = plt.subplots(len(params_opt.items()), 2, figsize=(14, 6))
+        # Adjust the figure size to fit the optimizer names
+        fig, axs = plt.subplots(len(params_opt.items()), 2, figsize=(12, 7),
+                                constrained_layout=True)
 
         for i, (label, params) in enumerate(params_opt.items()):
 
             raw_samples = prepare_and_sample(params)
-            if nqubits == 1:
+            if self.nqubits == 1:
                 raw_samples = [[_] for _ in raw_samples]
             samples = []
             for sam in raw_samples:
@@ -346,10 +348,10 @@ class FastSlowVQLS:
             axs[i, 1].xaxis.set_major_locator(MaxNLocator(integer=True))
 
             # plot probabilities
-            axs[i, 0].bar(np.arange(0, 2 ** nqubits), c_probs, color="skyblue")
-            axs[i, 1].bar(np.arange(0, 2 ** nqubits), q_probs, color="plum")
+            axs[i, 0].bar(np.arange(0, 2 ** self.nqubits), c_probs, color="skyblue")
+            axs[i, 1].bar(np.arange(0, 2 ** self.nqubits), q_probs, color="plum")
 
-            if i == len(params_opt.items())-1:
+            if i == len(params_opt.items()) - 1:
                 axs[i, 0].set_xlabel("Vector space basis", fontsize=18, fontname='serif')
                 axs[i, 1].set_xlabel("Hilbert space basis", fontsize=18, fontname='serif')
 
@@ -358,14 +360,15 @@ class FastSlowVQLS:
                 axs[i, 0].set_title("Classical probabilities", fontsize=18, fontname='serif')
 
             # Add optimizer name next to the right plot
-            axs[i, 1].annotate(label, xy=(1.05, 0.5), xycoords='axes fraction', va='center', fontsize=18, fontname='serif')
+            axs[i, 1].annotate(label, xy=(1.05, 0.5), xycoords='axes fraction', va='center', fontsize=18,
+                               fontname='serif')
 
             # Remove x axis ticks except for the lowest plot
             if i < len(params_opt.items()) - 1:
                 axs[i, 0].set_xticklabels([])
                 axs[i, 1].set_xticklabels([])
 
-
+        plt.show()
 
 
 if __name__ == "__main__":
