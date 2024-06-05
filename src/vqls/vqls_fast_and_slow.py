@@ -170,7 +170,7 @@ class FastSlowVQLS:
 
         def print_progress(res_):
             print("{:20s}    Step {:3d}    obj = {:9.7f} ".format(
-                    "Bayesian Optimization", len(res_.func_vals), res_.func_vals[-1]))
+                "Bayesian Optimization", len(res_.func_vals), res_.func_vals[-1]))
 
         # set parameter space
         dimensions = [(-np.pi, +np.pi) for _ in range(self.ansatz.nweights)]
@@ -316,57 +316,46 @@ class FastSlowVQLS:
     def solve_classic(self):
         return np.linalg.solve(self.A, self.b)
 
-    def get_state(self, params):
+    def plot_probs(self, params_opt, nshots=10 ** 6):
 
         # classical probabilities
-        A_inv = np.linalg.inv(self.A)
-        x = np.dot(A_inv, self.b)
+        x = self.solve_classic()
         c_probs = (x / np.linalg.norm(x)) ** 2
 
-        # quantum probabilities
-        n_shots = 10 ** 6
-        dev_x = qml.device("lightning.qubit", wires=nqubits, shots=n_shots)
+        dev_x = qml.device("lightning.qubit", wires=self.nqubits, shots=nshots)
 
         @qml.qnode(dev_x, interface="autograd")
         def prepare_and_sample(weights):
             self.V(weights)
             return qml.sample()
 
-        raw_samples = prepare_and_sample(params)
-        if nqubits == 1:
-            raw_samples = [[_] for _ in raw_samples]
-        samples = []
-        for sam in raw_samples:
-            samples.append(int("".join(str(bs) for bs in sam), base=2))
-        q_probs = np.round(np.bincount(samples) / n_shots, 2)
+        # fig, axs = plt.subplots(len(params_opt.items()), 2, figsize=(8, 35))
+        fig, axs = plt.subplots(len(params_opt.items()), 2)
 
-        # plots
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 5))
-        ax1.bar(np.arange(0, 2 ** nqubits), c_probs, color="skyblue")
-        ax1.set_xlim(-0.5, 2 ** nqubits - 0.5)
-        ax1.set_ylim(0.0, 1.0)
-        ax1.set_xlabel("Vector space basis")
-        ax1.set_title("Classical probabilities")
-        ax2.bar(np.arange(0, 2 ** nqubits), q_probs, color="plum")
-        ax2.set_xlim(-0.5, 2 ** nqubits - 0.5)
-        ax2.set_ylim(0.0, 1.0)
-        ax2.set_xlabel("Hilbert space basis")
-        ax2.set_title("Quantum probabilities")
-        plt.show()
+        # for label, params in params_opt.items():
+        for i, (label, params) in enumerate(params_opt.items()):
 
-        dev_x = qml.device("lightning.qubit", wires=nqubits, shots=None)
+            raw_samples = prepare_and_sample(params)
+            if nqubits == 1:
+                raw_samples = [[_] for _ in raw_samples]
+            samples = []
+            for sam in raw_samples:
+                samples.append(int("".join(str(bs) for bs in sam), base=2))
+            q_probs = np.round(np.bincount(samples) / nshots, 2)
 
-        @qml.qnode(dev_x)
-        def prepare_and_get_state(weights):
-            self.V(weights)  # V(weight)|0>
-            return qml.state()  # |x>
+            # plots
+            axs[i,0].bar(np.arange(0, 2 ** nqubits), c_probs, color="skyblue")
+            axs[i,0].set_xlim(-0.5, 2 ** nqubits - 0.5)
+            axs[i,0].set_ylim(0.0, 1.0)
+            axs[i,0].set_xlabel("Vector space basis")
+            axs[i,0].set_title("Classical probabilities")
+            axs[i,1].bar(np.arange(0, 2 ** nqubits), q_probs, color="plum")
+            axs[i,1].set_xlim(-0.5, 2 ** nqubits - 0.5)
+            axs[i,1].set_ylim(0.0, 1.0)
+            axs[i,1].set_xlabel("Hilbert space basis")
+            axs[i,1].set_title("Quantum probabilities")
 
-        state = np.round(np.real(prepare_and_get_state(params)), 2)
 
-        print(" x  =", np.round(x / np.linalg.norm(x), 2))
-        print("|x> =", state)
-
-        return state
 
 
 if __name__ == "__main__":
@@ -378,7 +367,7 @@ if __name__ == "__main__":
     nqubits = 1
     nlayers = 2
 
-    maxiter = 100
+    maxiter = 10
 
     # random symmetric positive definite matrix
     A0, b0 = utils.get_random_ls(nqubits, easy_example=True)
@@ -396,9 +385,11 @@ if __name__ == "__main__":
 
     ansatz_ = StrongEntangling(nqubits=nqubits, nlayers=nlayers)
 
-    prep_ = AmplitudeEmbedding(wires=range(nqubits))
+    prep_ = MottonenStatePrep(wires=range(nqubits))
 
     cost_hists = {}
+
+    wopts = {}
 
     for optim in optims:
         wopt, cost_hist = solver.opt(optimizer=optim,
@@ -410,7 +401,11 @@ if __name__ == "__main__":
 
         cost_hists[optim.name] = cost_hist
 
+        wopts[optim.name] = wopt
+
     title = "{:s}    qubits = {:d}    layers = {:d}".format(ansatz_.__class__.__name__, nqubits, nlayers)
     utils.plot_costs(data=cost_hists, save_png=True, title=title)
+
+    solver.plot_probs(wopts)
 
     plt.show()
