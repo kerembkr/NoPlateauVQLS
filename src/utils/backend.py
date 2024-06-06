@@ -1,6 +1,5 @@
 import pennylane as qml
 from abc import ABC, abstractmethod
-# from observable import ObsPauliZ
 
 
 class QDeviceBase(ABC):
@@ -9,6 +8,8 @@ class QDeviceBase(ABC):
     """
 
     def __init__(self):
+
+        # device
         self.name = None
         self.qdevice = None
         self.diff_method = None
@@ -16,7 +17,22 @@ class QDeviceBase(ABC):
         self.shots = None
         self.seed = None
         self.max_workers = None
+
+        # measurement
         self.observable = None
+        self.returntype = None
+
+        self.observable_list = {
+            "sigx": qml.PauliX,
+            "sigy": qml.PauliY,
+            "sigz": qml.PauliZ
+        }
+
+        self.returntype_list = {
+            "expval": qml.expval,
+            "probs": qml.probs,
+            "state": qml.state
+        }
 
     @abstractmethod
     def set_device(self, wires, diff_method=None, shots=None, seed='global', max_workers=None):
@@ -27,13 +43,17 @@ class QDeviceBase(ABC):
 
     def set_observable(self, observable):
         """
-        Abstract method to set the observable.
+        Method to set the observable.
         """
-        self.observable = observable
+
+        self.observable = self.observable_list[observable]
 
     def set_returntype(self, returntype):
+        """
+        Method to set the return Type.
+        """
 
-        self.returntype = returntype
+        self.returntype = self.returntype_list[returntype]
 
     @abstractmethod
     def execute(self, circuit, *args, **kwargs):
@@ -124,8 +144,8 @@ if __name__ == "__main__":
     # Using DefaultQubit backend
     backend = DefaultQubit()
     backend.set_device(wires=1, diff_method="parameter-shift", shots=10)
-    observable = qml.PauliZ
-    backend.set_observable(observable)
+    backend.set_observable(observable="sigz")
+    backend.set_returntype(returntype="expval")
     if backend.qdevice is not None:
         print(f"Device successfully set: {backend.qdevice}")
     result = backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
@@ -134,8 +154,8 @@ if __name__ == "__main__":
     # Using LightningQubit backend
     lightning_backend = LightningQubit()
     lightning_backend.set_device(wires=1, diff_method="backprop", shots=10)
-    observable = qml.PauliZ
-    lightning_backend.set_observable(observable)
+    lightning_backend.set_observable(observable="sigz")
+    lightning_backend.set_returntype(returntype="expval")
     if lightning_backend.qdevice is not None:
         print(f"Device successfully set: {lightning_backend.qdevice}")
     result = lightning_backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
