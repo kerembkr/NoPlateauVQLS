@@ -177,7 +177,6 @@ class QiskitAer(QDeviceBase):
 
 if __name__ == "__main__":
 
-    # Example usage
     def example_circuit(param1, param2, param3=None):
         qml.RX(param1, wires=0)
         qml.RY(param2, wires=0)
@@ -185,46 +184,34 @@ if __name__ == "__main__":
             qml.RZ(param3, wires=0)
 
 
-    # Using DefaultQubit backend
-    backend = DefaultQubit()
-    backend.set_device(wires=1, diff_method="parameter-shift", shots=1000)
-
-    # Verify that the device is set
-    if backend.qdevice is not None:
-        print(f"Device successfully set: {backend.qdevice}")
+    # # Using DefaultQubit backend
+    # backend = DefaultQubit()
+    # backend.set_device(wires=1, diff_method="parameter-shift", shots=10)
+    # if backend.qdevice is not None:
+    #     print(f"Device successfully set: {backend.qdevice}")
+    # result = backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
+    # print(f"Result: {result}")
     #
-    result = backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
-    print(f"Result: {result}")
-
-    # Using LightningQubit backend
-    lightning_backend = LightningQubit()
-    lightning_backend.set_device(wires=1, diff_method="backprop", shots=1000)
-
-    # Verify that the device is set
-    if lightning_backend.qdevice is not None:
-        print(f"Device successfully set: {lightning_backend.qdevice}")
-
-    result = lightning_backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
-    print(f"Result: {result}")
-
-    # Using DefaultQubitTorch backend
-    torch_backend = DefaultQubitTorch()
-    torch_backend.set_device(wires=1, diff_method="parameter-shift", shots=1000, seed=42, max_workers=2)
-
-    # Verify that the device is set
-    if torch_backend.qdevice is not None:
-        print(f"Device successfully set: {torch_backend.qdevice}")
-
-    result = torch_backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
-    print(f"Result: {result}")
+    # # Using LightningQubit backend
+    # lightning_backend = LightningQubit()
+    # lightning_backend.set_device(wires=1, diff_method="backprop", shots=10)
+    # if lightning_backend.qdevice is not None:
+    #     print(f"Device successfully set: {lightning_backend.qdevice}")
+    # result = lightning_backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
+    # print(f"Result: {result}")
+    #
+    # # Using DefaultQubitTorch backend
+    # torch_backend = DefaultQubitTorch()
+    # torch_backend.set_device(wires=1, diff_method="parameter-shift", shots=10)
+    # if torch_backend.qdevice is not None:
+    #     print(f"Device successfully set: {torch_backend.qdevice}")
+    # result = torch_backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
+    # print(f"Result: {result}")
 
     # Using QiskitAer backend
     aer_backend = QiskitAer()
-    aer_backend.set_device(wires=1, shots=1000, seed=42, max_workers=2)
-
-    # Verify that the device is set
+    aer_backend.set_device(wires=1, shots=10)
     if aer_backend.qdevice is not None:
         print(f"Device successfully set: {aer_backend.qdevice}")
-
     result = aer_backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
     print(f"Result: {result}")
