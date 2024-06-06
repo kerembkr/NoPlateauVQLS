@@ -56,7 +56,7 @@ class QDeviceBase(ABC):
         self.returntype = self.returntype_list[returntype]
 
     @abstractmethod
-    def execute(self, circuit, *args, **kwargs):
+    def execute(self, circuit, meas_wires, *args, **kwargs):
         """
         Abstract method to execute a quantum circuit.
         """
@@ -81,14 +81,14 @@ class DefaultQubit(QDeviceBase):
             print(f"Error setting device: {e}")
             self.qdevice = None
 
-    def execute(self, circuit, *args, **kwargs):
+    def execute(self, circuit, meas_wires, *args, **kwargs):
         if self.qdevice is None:
             raise ValueError("Device is not set. Call set_device() first.")
 
         @qml.qnode(self.qdevice)
         def qnode(*qnode_args, **qnode_kwargs):
             circuit(*qnode_args, **qnode_kwargs)
-            return self.returntype(self.observable(0))
+            return self.returntype(self.observable(meas_wires))
 
         try:
             result = qnode(*args, **kwargs)
@@ -115,14 +115,14 @@ class LightningQubit(QDeviceBase):
             print(f"Error setting device: {e}")
             self.qdevice = None
 
-    def execute(self, circuit, *args, **kwargs):
+    def execute(self, circuit, meas_wires, *args, **kwargs):
         if self.qdevice is None:
             raise ValueError("Device is not set. Call set_device() first.")
 
         @qml.qnode(device=self.qdevice, interface=self.interface)
         def qnode(*qnode_args, **qnode_kwargs):
             circuit(*qnode_args, **qnode_kwargs)
-            return self.returntype(self.observable(0))
+            return self.returntype(self.observable(meas_wires))
 
         try:
             result = qnode(*args, **kwargs)
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     backend.set_returntype(returntype="expval")
     if backend.qdevice is not None:
         print(f"Device successfully set: {backend.qdevice}")
-    result = backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
+    result = backend.execute(example_circuit, 0, 0.1, 0.2, param3=0.3)
     print(f"Result: {result}\n")
 
     # Using LightningQubit backend
@@ -158,5 +158,5 @@ if __name__ == "__main__":
     lightning_backend.set_returntype(returntype="expval")
     if lightning_backend.qdevice is not None:
         print(f"Device successfully set: {lightning_backend.qdevice}")
-    result = lightning_backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
+    result = lightning_backend.execute(example_circuit, 0, 0.1, 0.2, param3=0.3)
     print(f"Result: {result}\n")
