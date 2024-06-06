@@ -1,6 +1,6 @@
 import pennylane as qml
 from abc import ABC, abstractmethod
-from observable import ObsPauliZ
+# from observable import ObsPauliZ
 
 
 class QDeviceBase(ABC):
@@ -30,6 +30,10 @@ class QDeviceBase(ABC):
         Abstract method to set the observable.
         """
         self.observable = observable
+
+    def set_returntype(self, returntype):
+
+        self.returntype = returntype
 
     @abstractmethod
     def execute(self, circuit, *args, **kwargs):
@@ -120,8 +124,8 @@ if __name__ == "__main__":
     # Using DefaultQubit backend
     backend = DefaultQubit()
     backend.set_device(wires=1, diff_method="parameter-shift", shots=10)
-    observable = ObsPauliZ()
-    backend.set_observable(observable.obs)
+    observable = qml.PauliZ
+    backend.set_observable(observable)
     if backend.qdevice is not None:
         print(f"Device successfully set: {backend.qdevice}")
     result = backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
@@ -130,8 +134,8 @@ if __name__ == "__main__":
     # Using LightningQubit backend
     lightning_backend = LightningQubit()
     lightning_backend.set_device(wires=1, diff_method="backprop", shots=10)
-    observable = ObsPauliZ()
-    lightning_backend.set_observable(observable.obs)
+    observable = qml.PauliZ
+    lightning_backend.set_observable(observable)
     if lightning_backend.qdevice is not None:
         print(f"Device successfully set: {lightning_backend.qdevice}")
     result = lightning_backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
