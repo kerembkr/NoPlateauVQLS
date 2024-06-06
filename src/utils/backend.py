@@ -88,7 +88,7 @@ class DefaultQubit(QDeviceBase):
         @qml.qnode(self.qdevice)
         def qnode(*qnode_args, **qnode_kwargs):
             circuit(*qnode_args, **qnode_kwargs)
-            return qml.expval(self.observable(0))
+            return self.returntype(self.observable(0))
 
         try:
             result = qnode(*args, **kwargs)
@@ -122,7 +122,7 @@ class LightningQubit(QDeviceBase):
         @qml.qnode(device=self.qdevice, interface=self.interface)
         def qnode(*qnode_args, **qnode_kwargs):
             circuit(*qnode_args, **qnode_kwargs)
-            return qml.expval(self.observable(0))
+            return self.returntype(self.observable(0))
 
         try:
             result = qnode(*args, **kwargs)
