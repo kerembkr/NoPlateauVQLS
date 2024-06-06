@@ -1,8 +1,6 @@
 import pennylane as qml
 from abc import ABC, abstractmethod
-from qiskit_aer import Aer
-
-Aer.backends()
+from observable import ObsPauliZ
 
 
 class QDeviceBase(ABC):
@@ -18,6 +16,7 @@ class QDeviceBase(ABC):
         self.shots = None
         self.seed = None
         self.max_workers = None
+        self.observable = None
 
     @abstractmethod
     def set_device(self, wires, diff_method=None, shots=None, seed='global', max_workers=None):
@@ -25,6 +24,12 @@ class QDeviceBase(ABC):
         Abstract method to set the quantum device.
         """
         pass
+
+    def set_observable(self, observable):
+        """
+        Abstract method to set the observable.
+        """
+        self.observable = observable
 
     @abstractmethod
     def execute(self, circuit, *args, **kwargs):
@@ -41,7 +46,7 @@ class DefaultQubit(QDeviceBase):
 
     def __init__(self):
         super().__init__()
-        self.name = "default.qubit"
+        self.name = "Default"
 
     def set_device(self, wires, diff_method=None, shots=None, seed='global', max_workers=None):
         try:
@@ -59,7 +64,7 @@ class DefaultQubit(QDeviceBase):
         @qml.qnode(self.qdevice)
         def qnode(*qnode_args, **qnode_kwargs):
             circuit(*qnode_args, **qnode_kwargs)
-            return qml.expval(qml.PauliZ(0))
+            return qml.expval(self.observable(0))
 
         try:
             result = qnode(*args, **kwargs)
@@ -76,7 +81,7 @@ class LightningQubit(QDeviceBase):
 
     def __init__(self):
         super().__init__()
-        self.name = "lightning.qubit"
+        self.name = "Lightning"
 
     def set_device(self, wires, diff_method=None, shots=None, seed='global', max_workers=None):
         try:
@@ -90,10 +95,10 @@ class LightningQubit(QDeviceBase):
         if self.qdevice is None:
             raise ValueError("Device is not set. Call set_device() first.")
 
-        @qml.qnode(self.qdevice)
+        @qml.qnode(device=self.qdevice, interface=self.interface)
         def qnode(*qnode_args, **qnode_kwargs):
             circuit(*qnode_args, **qnode_kwargs)
-            return qml.expval(qml.PauliZ(0))
+            return qml.expval(self.observable(0))
 
         try:
             result = qnode(*args, **kwargs)
@@ -115,15 +120,19 @@ if __name__ == "__main__":
     # Using DefaultQubit backend
     backend = DefaultQubit()
     backend.set_device(wires=1, diff_method="parameter-shift", shots=10)
+    observable = ObsPauliZ()
+    backend.set_observable(observable.obs)
     if backend.qdevice is not None:
         print(f"Device successfully set: {backend.qdevice}")
     result = backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
-    print(f"Result: {result}")
+    print(f"Result: {result}\n")
 
     # Using LightningQubit backend
     lightning_backend = LightningQubit()
     lightning_backend.set_device(wires=1, diff_method="backprop", shots=10)
+    observable = ObsPauliZ()
+    lightning_backend.set_observable(observable.obs)
     if lightning_backend.qdevice is not None:
         print(f"Device successfully set: {lightning_backend.qdevice}")
     result = lightning_backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
-    print(f"Result: {result}")
+    print(f"Result: {result}\n")
