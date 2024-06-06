@@ -18,7 +18,7 @@ class QDeviceBase(ABC):
         self.max_workers = None
 
     @abstractmethod
-    def set_device(self, nwires, diff_method=None, shots=None, seed=None, max_workers=None):
+    def set_device(self, nwires, diff_method=None, shots=None, seed='global', max_workers=None):
         """
         Abstract method to set the quantum device.
         """
@@ -41,7 +41,7 @@ class DefaultQubit(QDeviceBase):
         super().__init__()
         self.name = "default.qubit"
 
-    def set_device(self, nwires, diff_method=None, shots=None, seed=None, max_workers=None):
+    def set_device(self, nwires, diff_method=None, shots=None, seed='global', max_workers=None):
         try:
             self.qdevice = qml.device("default.qubit", wires=nwires, shots=shots, seed=seed, max_workers=max_workers)
             print(f"Device set with {nwires} wires, diff_method={diff_method}, shots={shots}, seed={seed}, max_workers={max_workers}")
@@ -75,10 +75,10 @@ class LightningQubit(QDeviceBase):
         super().__init__()
         self.name = "lightning.qubit"
 
-    def set_device(self, nwires, diff_method=None, shots=None, seed=None, max_workers=None):
+    def set_device(self, nwires, diff_method=None, shots=None, seed='global', max_workers=None):
         try:
-            self.qdevice = qml.device("lightning.qubit", wires=nwires, diff_method=diff_method, shots=shots, seed=seed, max_workers=max_workers)
-            print(f"Device set with {nwires} wires, diff_method={diff_method}, shots={shots}, seed={seed}, max_workers={max_workers}")
+            self.qdevice = qml.device("lightning.qubit", wires=nwires, shots=shots, seed=seed)
+            print(f"Device set with {nwires} wires, shots={shots}, seed={seed}")
         except Exception as e:
             print(f"Error setting device: {e}")
             self.qdevice = None
@@ -109,9 +109,9 @@ class DefaultQubitTorch(QDeviceBase):
         super().__init__()
         self.name = "default.qubit.torch"
 
-    def set_device(self, nwires, diff_method=None, shots=None, seed=None, max_workers=None):
+    def set_device(self, nwires, diff_method=None, shots=None, seed='global', max_workers=None):
         try:
-            self.qdevice = qml.device("default.qubit", wires=nwires, interface="torch", diff_method=diff_method, shots=shots, seed=seed, max_workers=max_workers)
+            self.qdevice = qml.device("default.qubit.torch", wires=nwires, interface="torch", diff_method=diff_method, shots=shots, seed=seed, max_workers=max_workers)
             print(f"Device set with {nwires} wires, interface=torch, diff_method={diff_method}, shots={shots}, seed={seed}, max_workers={max_workers}")
         except Exception as e:
             print(f"Error setting device: {e}")
@@ -143,7 +143,7 @@ class QiskitAer(QDeviceBase):
         super().__init__()
         self.name = "qiskit.aer"
 
-    def set_device(self, nwires, diff_method=None, shots=None, seed=None, max_workers=None):
+    def set_device(self, nwires, diff_method=None, shots=None, seed='global', max_workers=None):
         try:
             self.qdevice = qml.device("qiskit.aer", wires=nwires, shots=shots, seed=seed, max_workers=max_workers)
             print(f"Device set with {nwires} wires, shots={shots}, seed={seed}, max_workers={max_workers}")
@@ -180,12 +180,12 @@ if __name__ == "__main__":
 
     # Using DefaultQubit backend
     backend = DefaultQubit()
-    backend.set_device(nwires=1, diff_method="parameter-shift", shots=1000, seed=42, max_workers=2)
+    backend.set_device(nwires=1, diff_method="parameter-shift", shots=1000)
 
     # Verify that the device is set
     if backend.qdevice is not None:
         print(f"Device successfully set: {backend.qdevice}")
-
+    #
     result = backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
     print(f"Result: {result}")
 
@@ -193,7 +193,7 @@ if __name__ == "__main__":
 
     # Using LightningQubit backend
     lightning_backend = LightningQubit()
-    lightning_backend.set_device(nwires=1, diff_method="backprop", shots=1000, seed=42, max_workers=2)
+    lightning_backend.set_device(nwires=1, diff_method="backprop", shots=1000)
 
     # Verify that the device is set
     if lightning_backend.qdevice is not None:
@@ -217,13 +217,13 @@ if __name__ == "__main__":
 
 
 
-    # Using QiskitAer backend
-    aer_backend = QiskitAer()
-    aer_backend.set_device(nwires=1, shots=1000, seed=42, max_workers=2)
-
-    # Verify that the device is set
-    if aer_backend.qdevice is not None:
-        print(f"Device successfully set: {aer_backend.qdevice}")
-
-    result = aer_backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
-    print(f"Result: {result}")
+    # # Using QiskitAer backend
+    # aer_backend = QiskitAer()
+    # aer_backend.set_device(nwires=1, shots=1000, seed=42, max_workers=2)
+    #
+    # # Verify that the device is set
+    # if aer_backend.qdevice is not None:
+    #     print(f"Device successfully set: {aer_backend.qdevice}")
+    #
+    # result = aer_backend.execute(example_circuit, 0.1, 0.2, param3=0.3)
+    # print(f"Result: {result}")
