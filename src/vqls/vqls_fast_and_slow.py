@@ -377,10 +377,10 @@ if __name__ == "__main__":
     np.random.seed(42)
 
     # number of qubits & layers
-    nqubits = 2
-    nlayers = 2
+    nqubits = 1
+    nlayers = 1
 
-    maxiter = 100
+    maxiter = 20
 
     # random symmetric positive definite matrix
     A0, b0 = utils.get_random_ls(nqubits, easy_example=True)
@@ -420,5 +420,3 @@ if __name__ == "__main__":
     utils.plot_costs(data=cost_hists, save_png=True, title=title)
 
     solver.plot_probs(wopts)
-
-    # plt.show()
