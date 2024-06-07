@@ -31,7 +31,9 @@ class QDeviceBase(ABC):
         self.returntype_list = {
             "expval": qml.expval,
             "probs": qml.probs,
-            "state": qml.state
+            "state": qml.state,
+            "counts": qml.counts,
+            "sample": qml.sample
         }
 
     @abstractmethod
