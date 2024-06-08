@@ -102,10 +102,6 @@ class FastSlowVQLS:
 
         """
 
-        # dev_mu = qml.device("default.qubit", wires=nqubits + 1)
-        #
-        # @qml.qnode(dev_mu)
-
         @qml.qnode(self.backend.qdevice)
         def qcircuit(weights):
 
