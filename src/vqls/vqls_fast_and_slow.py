@@ -374,7 +374,7 @@ if __name__ == "__main__":
     nqubits = 1
     nlayers = 1
 
-    maxiter = 5
+    maxiter = 100
 
     # random symmetric positive definite matrix
     A0, b0 = utils.get_random_ls(nqubits, easy_example=True)
@@ -415,6 +415,6 @@ if __name__ == "__main__":
     title = "{:s}    qubits = {:d}    layers = {:d}".format(ansatz_.__class__.__name__, nqubits, nlayers)
     utils.plot_costs(data=cost_hists, save_png=True, title=title)
 
-    device_probs = LightningQubit(wires=nqubits, shots=100)
+    device_probs = LightningQubit(wires=nqubits, shots=10000)
 
     solver.plot_probs(device_probs, wopts)
