@@ -36,19 +36,11 @@ class QDeviceBase(ABC):
             "sample": qml.sample
         }
 
-        self.interface_list = {
-            "expval": qml.expval,
-            "probs": qml.probs,
-            "state": qml.state,
-            "counts": qml.counts,
-            "sample": qml.sample
-        }
-
     def set_device(self, device_name, **kwargs):
         try:
             self.qdevice = qml.device(device_name, **kwargs)
-            print(
-                f"Device set with {kwargs['wires']} wires, shots={kwargs.get('shots')}, seed={kwargs.get('seed')}, max_workers={kwargs.get('max_workers')}")
+            kwargs_str = ', '.join(f"{key}={value}" for key, value in kwargs.items())
+            print(f"Device set with {kwargs_str}")
         except Exception as e:
             print(f"Error setting device: {e}")
             self.qdevice = None
@@ -73,7 +65,7 @@ class DefaultQubit(QDeviceBase):
     Backend for the default.qubit simulator.
     """
 
-    def __init__(self, wires, shots=None, seed=None, max_workers=None, observable=None, returntype=None):
+    def __init__(self, wires, shots=None, seed=None, max_workers=None, observable="sigz", returntype="expval"):
         super().__init__()
         self.name = "default.qubit"
         self.wires = wires
@@ -84,7 +76,11 @@ class DefaultQubit(QDeviceBase):
         self.returntype = self.returntype_list[returntype]
 
         # set the backend device
-        self.set_device("default.qubit", wires=wires, shots=shots, seed=seed, max_workers=max_workers)
+        self.set_device(device_name=self.name,
+                        wires=self.wires,
+                        shots=self.shots,
+                        seed=self.seed,
+                        max_workers=self.max_workers)
 
 
 class LightningQubit(QDeviceBase):
@@ -92,29 +88,31 @@ class LightningQubit(QDeviceBase):
     Backend for the lightning.qubit simulator.
     """
 
-    def __init__(self, wires, shots=None, seed=None, interface=None, observable=None, returntype=None):
+    def __init__(self, wires, shots=None, seed=None, interface="auto", observable="sigz", returntype="expval"):
         super().__init__()
         self.name = "lightning.qubit"
         self.wires = wires
         self.shots = shots
         self.seed = seed
-        self.interface = self.interface_list[interface]
+        self.interface = interface
         self.observable = self.observable_list[observable]
         self.returntype = self.returntype_list[returntype]
 
         # set the backend device
-        self.set_device("lightning.qubit", wires=wires, shots=shots, seed=seed)
+        self.set_device(device_name=self.name,
+                        wires=self.wires,
+                        shots=self.shots,
+                        seed=self.seed)
 
 
 if __name__ == "__main__":
 
     # Using DefaultQubit backend
-    backend = DefaultQubit()
+    backend = DefaultQubit(wires=[0, 1])
     if backend.qdevice is not None:
         print(f"Device successfully set: {backend.qdevice}")
 
     # Using LightningQubit backend
-    lightning_backend = LightningQubit()
+    lightning_backend = LightningQubit(wires=[0, 1])
     if lightning_backend.qdevice is not None:
         print(f"Device successfully set: {lightning_backend.qdevice}")
-

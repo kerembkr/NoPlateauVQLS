@@ -63,7 +63,7 @@ class FastSlowVQLS:
             self.stateprep = stateprep
 
         if backend is None:
-            self.backend = DefaultQubit()
+            self.backend = DefaultQubit(wires=self.nqubits+1)
         else:
             self.backend = backend
 
@@ -102,9 +102,11 @@ class FastSlowVQLS:
 
         """
 
-        dev_mu = qml.device("default.qubit", wires=nqubits + 1)
+        # dev_mu = qml.device("default.qubit", wires=nqubits + 1)
+        #
+        # @qml.qnode(dev_mu)
 
-        @qml.qnode(dev_mu)
+        @qml.qnode(self.backend.qdevice)
         def qcircuit(weights):
 
             # First Hadamard gate applied to the ancillary qubit.
@@ -311,15 +313,13 @@ class FastSlowVQLS:
     def solve_classic(self):
         return np.linalg.solve(self.A, self.b)
 
-    def plot_probs(self, params_opt, nshots=10 ** 6):
+    def plot_probs(self, device, params_opt):
 
         # classical probabilities
         x = self.solve_classic()
         c_probs = (x / np.linalg.norm(x)) ** 2
 
-        dev_x = qml.device("lightning.qubit", wires=self.nqubits, shots=nshots)
-
-        @qml.qnode(dev_x, interface="autograd")
+        @qml.qnode(device.qdevice, interface=device.interface)
         def prepare_and_sample(weights):
             self.V(weights)
             return qml.sample()
@@ -336,7 +336,7 @@ class FastSlowVQLS:
             samples = []
             for sam in raw_samples:
                 samples.append(int("".join(str(bs) for bs in sam), base=2))
-            q_probs = np.round(np.bincount(samples) / nshots, 2)
+            q_probs = np.round(np.bincount(samples) / device.shots, 2)
 
             axs[i, 0].xaxis.set_major_locator(MaxNLocator(integer=True))
             axs[i, 1].xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -374,7 +374,7 @@ if __name__ == "__main__":
     nqubits = 1
     nlayers = 1
 
-    maxiter = 20
+    maxiter = 5
 
     # random symmetric positive definite matrix
     A0, b0 = utils.get_random_ls(nqubits, easy_example=True)
@@ -394,10 +394,9 @@ if __name__ == "__main__":
 
     prep_ = MottonenStatePrep(wires=range(nqubits))
 
-    backend_ = DefaultQubit()
+    backend_ = DefaultQubit(wires=nqubits + 1)
 
     cost_hists = {}
-
     wopts = {}
 
     for optim in optims:
@@ -416,4 +415,6 @@ if __name__ == "__main__":
     title = "{:s}    qubits = {:d}    layers = {:d}".format(ansatz_.__class__.__name__, nqubits, nlayers)
     utils.plot_costs(data=cost_hists, save_png=True, title=title)
 
-    solver.plot_probs(wopts)
+    device_probs = LightningQubit(wires=nqubits, shots=100)
+
+    solver.plot_probs(device_probs, wopts)
