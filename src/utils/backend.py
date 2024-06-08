@@ -57,12 +57,12 @@ class QDeviceBase(ABC):
 
         self.returntype = self.returntype_list[returntype]
 
-    @abstractmethod
-    def execute(self, circuit, meas_wires, *args, **kwargs):
-        """
-        Abstract method to execute a quantum circuit.
-        """
-        pass
+    # @abstractmethod
+    # def execute(self, circuit, meas_wires, *args, **kwargs):
+    #     """
+    #     Abstract method to execute a quantum circuit.
+    #     """
+    #     pass
 
 
 class DefaultQubit(QDeviceBase):
@@ -83,21 +83,21 @@ class DefaultQubit(QDeviceBase):
             print(f"Error setting device: {e}")
             self.qdevice = None
 
-    def execute(self, circuit, meas_wires, *args, **kwargs):
-        if self.qdevice is None:
-            raise ValueError("Device is not set. Call set_device() first.")
-
-        @qml.qnode(self.qdevice)
-        def qnode(*qnode_args, **qnode_kwargs):
-            circuit(*qnode_args, **qnode_kwargs)
-            return self.returntype(self.observable(meas_wires))
-
-        try:
-            result = qnode(*args, **kwargs)
-            return result
-        except Exception as e:
-            print(f"Error executing circuit: {e}")
-            return None
+    # def execute(self, circuit, meas_wires, *args, **kwargs):
+    #     if self.qdevice is None:
+    #         raise ValueError("Device is not set. Call set_device() first.")
+    #
+    #     @qml.qnode(self.qdevice)
+    #     def qnode(*qnode_args, **qnode_kwargs):
+    #         circuit(*qnode_args, **qnode_kwargs)
+    #         return self.returntype(self.observable(meas_wires))
+    #
+    #     try:
+    #         result = qnode(*args, **kwargs)
+    #         return result
+    #     except Exception as e:
+    #         print(f"Error executing circuit: {e}")
+    #         return None
 
 
 class LightningQubit(QDeviceBase):
@@ -117,21 +117,21 @@ class LightningQubit(QDeviceBase):
             print(f"Error setting device: {e}")
             self.qdevice = None
 
-    def execute(self, circuit, meas_wires, *args, **kwargs):
-        if self.qdevice is None:
-            raise ValueError("Device is not set. Call set_device() first.")
-
-        @qml.qnode(device=self.qdevice, interface=self.interface)
-        def qnode(*qnode_args, **qnode_kwargs):
-            circuit(*qnode_args, **qnode_kwargs)
-            return self.returntype(self.observable(meas_wires))
-
-        try:
-            result = qnode(*args, **kwargs)
-            return result
-        except Exception as e:
-            print(f"Error executing circuit: {e}")
-            return None
+    # def execute(self, circuit, meas_wires, *args, **kwargs):
+    #     if self.qdevice is None:
+    #         raise ValueError("Device is not set. Call set_device() first.")
+    #
+    #     @qml.qnode(device=self.qdevice, interface=self.interface)
+    #     def qnode(*qnode_args, **qnode_kwargs):
+    #         circuit(*qnode_args, **qnode_kwargs)
+    #         return self.returntype(self.observable(meas_wires))
+    #
+    #     try:
+    #         result = qnode(*args, **kwargs)
+    #         return result
+    #     except Exception as e:
+    #         print(f"Error executing circuit: {e}")
+    #         return None
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ from src.utils.embedding import *
 from src.optimizers.optim_qml import *
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from src.utils.backend import DefaultQubit, LightningQubit
 
 
 class FastSlowVQLS:
@@ -99,19 +100,6 @@ class FastSlowVQLS:
 
         @qml.qnode(dev_mu)
         def qcircuit(weights):
-            """
-            Variational circuit mapping the ground state |0> to the ansatz state |x>.
-
-            Parameters
-            ----------
-            weights : np.array
-                Trainable parameters for the variational circuit.
-
-            Returns
-            -------
-            float
-                Expectation value of ancillary qubit in Pauli-Z basis.
-            """
 
             # First Hadamard gate applied to the ancillary qubit.
             qml.Hadamard(wires=nqubits)
