@@ -25,8 +25,9 @@ class FastSlowVQLS:
         self.optimizer = None
         self.stateprep = None
         self.ansatz = None
+        self.backend = None
 
-    def opt(self, optimizer=None, ansatz=None, stateprep=None, epochs=100, epochs_bo=None, tol=1e-4):
+    def opt(self, optimizer=None, ansatz=None, stateprep=None, backend=None, epochs=100, epochs_bo=None, tol=1e-4):
         """
         Minimize the cost function using a Variational Quantum Circuit.
 
@@ -60,6 +61,11 @@ class FastSlowVQLS:
             self.stateprep = AmplitudeEmbedding(wires=range(self.nqubits))
         else:
             self.stateprep = stateprep
+
+        if backend is None:
+            self.backend = DefaultQubit()
+        else:
+            self.backend = backend
 
         # initial weights
         w = self.ansatz.init_weights()
@@ -388,6 +394,8 @@ if __name__ == "__main__":
 
     prep_ = MottonenStatePrep(wires=range(nqubits))
 
+    backend_ = DefaultQubit()
+
     cost_hists = {}
 
     wopts = {}
@@ -396,6 +404,7 @@ if __name__ == "__main__":
         wopt, cost_hist = solver.opt(optimizer=optim,
                                      ansatz=ansatz_,
                                      stateprep=prep_,
+                                     backend=backend_,
                                      epochs=maxiter,
                                      epochs_bo=None,
                                      tol=1e-6)

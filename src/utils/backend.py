@@ -36,12 +36,22 @@ class QDeviceBase(ABC):
             "sample": qml.sample
         }
 
-    @abstractmethod
-    def set_device(self, wires, diff_method=None, shots=None, seed='global', max_workers=None):
-        """
-        Abstract method to set the quantum device.
-        """
-        pass
+        self.interface_list = {
+            "expval": qml.expval,
+            "probs": qml.probs,
+            "state": qml.state,
+            "counts": qml.counts,
+            "sample": qml.sample
+        }
+
+    def set_device(self, device_name, **kwargs):
+        try:
+            self.qdevice = qml.device(device_name, **kwargs)
+            print(
+                f"Device set with {kwargs['wires']} wires, shots={kwargs.get('shots')}, seed={kwargs.get('seed')}, max_workers={kwargs.get('max_workers')}")
+        except Exception as e:
+            print(f"Error setting device: {e}")
+            self.qdevice = None
 
     def set_observable(self, observable):
         """
@@ -57,47 +67,24 @@ class QDeviceBase(ABC):
 
         self.returntype = self.returntype_list[returntype]
 
-    # @abstractmethod
-    # def execute(self, circuit, meas_wires, *args, **kwargs):
-    #     """
-    #     Abstract method to execute a quantum circuit.
-    #     """
-    #     pass
-
 
 class DefaultQubit(QDeviceBase):
     """
     Backend for the default.qubit simulator.
     """
 
-    def __init__(self):
+    def __init__(self, wires, shots=None, seed=None, max_workers=None, observable=None, returntype=None):
         super().__init__()
-        self.name = "Default"
+        self.name = "default.qubit"
+        self.wires = wires
+        self.shots = shots
+        self.seed = seed
+        self.max_workers = max_workers
+        self.observable = self.observable_list[observable]
+        self.returntype = self.returntype_list[returntype]
 
-    def set_device(self, wires, diff_method=None, shots=None, seed='global', max_workers=None):
-        try:
-            self.qdevice = qml.device("default.qubit", wires=wires, shots=shots, seed=seed, max_workers=max_workers)
-            print(
-                f"Device set with {wires} wires, diff_method={diff_method}, shots={shots}, seed={seed}, max_workers={max_workers}")
-        except Exception as e:
-            print(f"Error setting device: {e}")
-            self.qdevice = None
-
-    # def execute(self, circuit, meas_wires, *args, **kwargs):
-    #     if self.qdevice is None:
-    #         raise ValueError("Device is not set. Call set_device() first.")
-    #
-    #     @qml.qnode(self.qdevice)
-    #     def qnode(*qnode_args, **qnode_kwargs):
-    #         circuit(*qnode_args, **qnode_kwargs)
-    #         return self.returntype(self.observable(meas_wires))
-    #
-    #     try:
-    #         result = qnode(*args, **kwargs)
-    #         return result
-    #     except Exception as e:
-    #         print(f"Error executing circuit: {e}")
-    #         return None
+        # set the backend device
+        self.set_device("default.qubit", wires=wires, shots=shots, seed=seed, max_workers=max_workers)
 
 
 class LightningQubit(QDeviceBase):
@@ -105,60 +92,29 @@ class LightningQubit(QDeviceBase):
     Backend for the lightning.qubit simulator.
     """
 
-    def __init__(self):
+    def __init__(self, wires, shots=None, seed=None, interface=None, observable=None, returntype=None):
         super().__init__()
-        self.name = "Lightning"
+        self.name = "lightning.qubit"
+        self.wires = wires
+        self.shots = shots
+        self.seed = seed
+        self.interface = self.interface_list[interface]
+        self.observable = self.observable_list[observable]
+        self.returntype = self.returntype_list[returntype]
 
-    def set_device(self, wires, diff_method=None, shots=None, seed='global', max_workers=None):
-        try:
-            self.qdevice = qml.device("lightning.qubit", wires=wires, shots=shots, seed=seed)
-            print(f"Device set with {wires} wires, shots={shots}, seed={seed}")
-        except Exception as e:
-            print(f"Error setting device: {e}")
-            self.qdevice = None
-
-    # def execute(self, circuit, meas_wires, *args, **kwargs):
-    #     if self.qdevice is None:
-    #         raise ValueError("Device is not set. Call set_device() first.")
-    #
-    #     @qml.qnode(device=self.qdevice, interface=self.interface)
-    #     def qnode(*qnode_args, **qnode_kwargs):
-    #         circuit(*qnode_args, **qnode_kwargs)
-    #         return self.returntype(self.observable(meas_wires))
-    #
-    #     try:
-    #         result = qnode(*args, **kwargs)
-    #         return result
-    #     except Exception as e:
-    #         print(f"Error executing circuit: {e}")
-    #         return None
+        # set the backend device
+        self.set_device("lightning.qubit", wires=wires, shots=shots, seed=seed)
 
 
 if __name__ == "__main__":
 
-    def example_circuit(param1, param2, param3=None):
-        qml.RX(param1, wires=0)
-        qml.RY(param2, wires=0)
-        if param3 is not None:
-            qml.RZ(param3, wires=0)
-
-
     # Using DefaultQubit backend
     backend = DefaultQubit()
-    backend.set_device(wires=1, diff_method="parameter-shift", shots=10)
-    backend.set_observable(observable="sigz")
-    backend.set_returntype(returntype="expval")
     if backend.qdevice is not None:
         print(f"Device successfully set: {backend.qdevice}")
-    result = backend.execute(example_circuit, 0, 0.1, 0.2, param3=0.3)
-    print(f"Result: {result}\n")
 
     # Using LightningQubit backend
     lightning_backend = LightningQubit()
-    lightning_backend.set_device(wires=1, diff_method="backprop", shots=10)
-    lightning_backend.set_observable(observable="sigz")
-    lightning_backend.set_returntype(returntype="expval")
     if lightning_backend.qdevice is not None:
         print(f"Device successfully set: {lightning_backend.qdevice}")
-    result = lightning_backend.execute(example_circuit, 0, 0.1, 0.2, param3=0.3)
-    print(f"Result: {result}\n")
+
