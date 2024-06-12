@@ -1,3 +1,9 @@
+import os
+import sys
+
+SCRIPT_DIR = os.path.abspath(__file__)
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
 import src.utils.utils as utils
 from skopt import gp_minimize
 from src.utils.ansatz import *
@@ -370,7 +376,7 @@ if __name__ == "__main__":
     nqubits = 1
     nlayers = 1
 
-    maxiter = 100
+    maxiter = 10
 
     # random symmetric positive definite matrix
     A0, b0 = utils.get_random_ls(nqubits, easy_example=True)
