@@ -1,17 +1,22 @@
 import os
 import sys
-
 SCRIPT_DIR = os.path.abspath(__file__)
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 import src.utils.utils as utils
 from skopt import gp_minimize
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 from src.utils.ansatz import *
 from src.utils.embedding import *
 from src.optimizers.optim_qml import *
-import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
 from src.utils.backend import DefaultQubit, LightningQubit
+
+# # from utils.ansatz import *
+# import utils.ansatz
+# from ..utils.embedding import *
+# from ..optimizers.optim_qml import *
+# from ..utils.backend import DefaultQubit, LightningQubit
 
 
 class FastSlowVQLS:
